@@ -9,3 +9,6 @@ wheels/
 # Virtual environments
 .venv
 sandbox/
+
+# Environment files
+.env
