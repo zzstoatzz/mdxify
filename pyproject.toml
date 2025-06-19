@@ -1,0 +1,84 @@
+[project]
+name = "mdxify"
+version = "0.1.0"
+description = "Generate MDX API documentation from Python modules"
+readme = "README.md"
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Documentation",
+    "Topic :: Software Development :: Documentation",
+]
+keywords = ["documentation", "mdx", "api", "python"]
+authors = [
+    { name = "zzstoatzz", email = "thrast36@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "griffe>=0.36.0",
+]
+
+[dependency-groups]
+dev = [
+    "ipython",
+    "ty",
+    "pre-commit>=2.21,<4.0",
+    "ruff",
+    "pytest>=7.3.1",
+    "pytest-asyncio>=0.18.2",
+]
+
+[project.scripts]
+mdxify = "mdxify.cli:main"
+
+[project.urls]
+Code = "https://github.com/zzstoatzz/mdxify"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = [
+    "*.egg-info",
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".vscode",
+    "node_modules",
+]
+asyncio_mode = 'auto'
+
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+extend-select = ["I"]
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ['I', 'F401', 'E402']
+"conftest.py" = ["F401", "F403"]
+'tests/fixtures/*.py' = ['F403']
+
+[tool.ruff.format]
+quote-style = "double"
+skip-magic-trailing-comma = false
+
+[tool.ty.environment]
+python-version = "3.10"
+
+[tool.ty.src]
+root = "src"
+
+[tool.ty.rules]
+unresolved-import = "warn"
+missing-argument = "error"
+possibly-unbound-attribute = "warn"
+invalid-return-type = "error"
+unresolved-attribute = "error"
