@@ -65,6 +65,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 "__init__.py" = ['I', 'F401', 'E402']
 "conftest.py" = ["F401", "F403"]
 'tests/fixtures/*.py' = ['F403']
+"src/mdxify/_version.py" = ['I001']  # Auto-generated file
 
 [tool.ruff.format]
 quote-style = "double"
