@@ -1,6 +1,6 @@
 [project]
 name = "mdxify"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Generate MDX API documentation from Python modules"
 readme = "README.md"
 license = { text = "MIT" }
@@ -38,7 +38,7 @@ mdxify = "mdxify.cli:main"
 Code = "https://github.com/zzstoatzz/mdxify"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
@@ -82,3 +82,9 @@ missing-argument = "error"
 possibly-unbound-attribute = "warn"
 invalid-return-type = "error"
 unresolved-attribute = "error"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/mdxify/_version.py"
