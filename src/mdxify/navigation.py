@@ -62,7 +62,7 @@ def build_hierarchical_navigation(
     root_package = None
     if generated_modules:
         first_parts = generated_modules[0].split(".")
-        if len(first_parts) > 1:
+        if len(first_parts) >= 1:
             potential_root = first_parts[0]
             # Check if all modules start with this root
             if all(m.startswith(potential_root + ".") or m == potential_root for m in generated_modules):
@@ -71,23 +71,29 @@ def build_hierarchical_navigation(
     for module_name in sorted(generated_modules):
         parts = module_name.split(".")
         
-        # Skip the root package if we have one
+        # Skip just the root package itself if present
+        if root_package and module_name == root_package:
+            continue
+            
+        # Skip the root package prefix for tree building
         if root_package and parts[0] == root_package:
             parts = parts[1:]
-            if not parts:  # This was just the root package itself
-                continue
         
-        # Navigate/create the tree structure
+        # Build the tree with path info for ALL modules
         current = module_tree
-        for i, part in enumerate(parts):
-            if i == len(parts) - 1:
-                # This is the leaf module
-                current[part] = {"_is_leaf": True, "_full_name": module_name}
-            else:
-                # This is an intermediate module
-                if part not in current:
-                    current[part] = {}
-                current = current[part]
+        for i, part in enumerate(parts[:-1]):
+            if part not in current:
+                current[part] = {"_submodules": {}}
+            elif "_submodules" not in current[part]:
+                current[part]["_submodules"] = {}
+            current = current[part]["_submodules"]
+        
+        # Add the leaf module
+        if parts:
+            leaf = parts[-1]
+            if leaf not in current:
+                current[leaf] = {}
+            current[leaf]["_path"] = module_name
     
     def tree_to_nav(tree: dict, parent_parts: list[str] | None = None) -> list[Any]:
         """Convert the tree structure to navigation format."""
@@ -99,53 +105,47 @@ def build_hierarchical_navigation(
             
         result = []
         
-        for name, subtree in sorted(tree.items()):
+        for name, info in sorted(tree.items()):
             current_parts = parent_parts + [name]
+            submodules = info.get("_submodules", {})
+            has_path = "_path" in info
             
-            if subtree.get("_is_leaf"):
-                # This is a leaf module - add the path to the file
-                full_name = subtree["_full_name"]
-                filename = full_name.replace(".", "-")
+            if submodules:
+                # This has submodules - create a group
+                group_entry = {"group": name, "pages": []}
                 
-                # Check if this module has submodules - if so, it's saved as __init__
-                has_submodules = any(
-                    name.startswith(full_name + ".") 
-                    for name in generated_modules 
-                    if name != full_name
-                )
+                # If this module itself exists (has a path), add it as __init__
+                if has_path:
+                    module_name = info["_path"]
+                    filename = module_name.replace(".", "-") + "-__init__"
+                    
+                    if nav_prefix:
+                        nav_path = str(nav_prefix / filename).replace("\\", "/")
+                    else:
+                        nav_path = filename
+                        
+                    module_file = output_dir / f"{filename}.mdx"
+                    if module_file.exists():
+                        if not skip_empty_parents or not is_module_empty(module_file):
+                            group_entry["pages"].append(nav_path)
                 
-                if has_submodules:
-                    filename = f"{filename}-__init__"
+                # Add all submodules recursively
+                sub_pages = tree_to_nav(submodules, current_parts)
+                group_entry["pages"].extend(sub_pages)
+                
+                # Only add the group if it has content
+                if group_entry["pages"]:
+                    result.append(group_entry)
+            elif has_path:
+                # This is a leaf module with no submodules
+                module_name = info["_path"]
+                filename = module_name.replace(".", "-")
                 
                 if nav_prefix:
                     nav_path = str(nav_prefix / filename).replace("\\", "/")
                 else:
                     nav_path = filename
                 result.append(nav_path)
-            else:
-                # This has submodules - create a group
-                group_entry = {"group": name, "pages": []}
-                
-                # Check if this module itself has documentation (as __init__)
-                module_name = ".".join(current_parts)
-                init_filename = f"{module_name.replace('.', '-')}-__init__"
-                init_file = output_dir / f"{init_filename}.mdx"
-                
-                if init_file.exists():
-                    if not skip_empty_parents or not is_module_empty(init_file):
-                        if nav_prefix:
-                            nav_path = str(nav_prefix / init_filename).replace("\\", "/")
-                        else:
-                            nav_path = init_filename
-                        group_entry["pages"].append(nav_path)
-                
-                # Add all submodules
-                sub_pages = tree_to_nav(subtree, current_parts)
-                group_entry["pages"].extend(sub_pages)
-                
-                # Only add the group if it has content
-                if group_entry["pages"]:
-                    result.append(group_entry)
         
         return result
     
