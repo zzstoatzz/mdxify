@@ -160,7 +160,7 @@ def test_update_docs_json_without_placeholder(tmp_path, capsys):
     
     # Should print warning
     captured = capsys.readouterr()
-    assert "Could not find mdxify placeholder" in captured.out
+    assert "Could not find mdxify anchor 'SDK Reference' or placeholder" in captured.out
     assert '{"$mdxify": "generated"}' in captured.out
 
 
@@ -312,6 +312,52 @@ def test_navigation_sorting(tmp_path):
     # Should be sorted: plain pages first (alpha, charlie, zebra), then groups (beta)
     expected_order = ["alpha", "charlie", "zebra", "beta"]
     assert top_level_names == expected_order
+
+
+def test_update_existing_anchor(tmp_path):
+    """Test updating an existing anchor instead of placeholder."""
+    # Create a docs.json with existing anchor
+    docs_json = tmp_path / "docs.json"
+    docs_config = {
+        "name": "Test Project",
+        "navigation": [
+            {
+                "anchor": "SDK Reference",
+                "groups": [
+                    {
+                        "group": "Modules",
+                        "pages": [
+                            "python-sdk/old-module"  # Existing entry
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+    
+    with open(docs_json, "w") as f:
+        json.dump(docs_config, f)
+    
+    # Create some new MDX files
+    output_dir = tmp_path / "python-sdk"
+    output_dir.mkdir()
+    (output_dir / "mypackage-core.mdx").write_text("# Core")
+    (output_dir / "mypackage-utils.mdx").write_text("# Utils")
+    
+    # Update docs.json
+    generated_modules = ["mypackage.core", "mypackage.utils"]
+    update_docs_json(docs_json, generated_modules, output_dir, regenerate_all=True)
+    
+    # Check the result
+    with open(docs_json) as f:
+        updated_config = json.load(f)
+    
+    # Should have replaced the old pages with new ones
+    pages = updated_config["navigation"][0]["groups"][0]["pages"]
+    assert len(pages) == 2
+    assert "python-sdk/mypackage-core" in pages
+    assert "python-sdk/mypackage-utils" in pages
+    assert "python-sdk/old-module" not in pages  # Old entry should be gone
 
 
 def test_hierarchical_navigation_with_fully_qualified_names(tmp_path):

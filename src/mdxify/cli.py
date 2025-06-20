@@ -53,6 +53,11 @@ def main():
         default=False,
         help="Skip parent modules that only contain boilerplate (default: False)",
     )
+    parser.add_argument(
+        "--anchor-name",
+        default="SDK Reference",
+        help="Name of the navigation anchor to update (default: 'SDK Reference')",
+    )
 
     args = parser.parse_args()
 
@@ -151,7 +156,8 @@ def main():
                 generated_modules, 
                 args.output_dir,
                 regenerate_all=regenerate_all,
-                skip_empty_parents=args.skip_empty_parents
+                skip_empty_parents=args.skip_empty_parents,
+                anchor_name=args.anchor_name
             )
             print("Navigation updated successfully")
         else:

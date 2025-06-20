@@ -115,22 +115,3 @@ def test_generate_mdx_with_content(tmp_path):
     assert "A test class." in content
     assert "#### `test_method`" in content
     assert "test_method(self)" in content
-
-
-def test_generate_mdx_same_name_as_parent(tmp_path):
-    """Test MDX generation when module has same name as parent package."""
-    module_info = {
-        "name": "fastmcp.server.server",
-        "docstring": "Server module.",
-        "functions": [],
-        "classes": [],
-    }
-
-    output_file = tmp_path / "fastmcp-server-server.mdx"
-    generate_mdx(module_info, output_file)
-
-    content = output_file.read_text()
-    # Should add "(module)" suffix to distinguish from parent
-    assert "title: server (module)" in content
-    assert "sidebarTitle: server (module)" in content
-    assert "# `fastmcp.server.server`" in content

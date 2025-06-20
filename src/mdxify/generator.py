@@ -29,18 +29,9 @@ def generate_mdx(module_info: dict[str, Any], output_file: Path) -> None:
         lines.append("title: __init__")
         lines.append("sidebarTitle: __init__")
     else:
-        module_parts = module_info["name"].split(".")
-        module_name = module_parts[-1]
-        
-        # Check if the module name is the same as its parent package
-        # e.g., fastmcp.server.server -> parent is "server", module is "server"
-        if len(module_parts) >= 2 and module_parts[-1] == module_parts[-2]:
-            # Use a more descriptive title to avoid confusion
-            lines.append(f"title: {module_name} (module)")
-            lines.append(f"sidebarTitle: {module_name} (module)")
-        else:
-            lines.append(f"title: {module_name}")
-            lines.append(f"sidebarTitle: {module_name}")
+        module_name = module_info["name"].split(".")[-1]
+        lines.append(f"title: {module_name}")
+        lines.append(f"sidebarTitle: {module_name}")
     lines.append("---")
     lines.append("")
 
