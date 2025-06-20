@@ -95,7 +95,7 @@ def build_hierarchical_navigation(
                 current[leaf] = {}
             current[leaf]["_path"] = module_name
     
-    def tree_to_nav(tree: dict, parent_parts: list[str] | None = None) -> list[Any]:
+    def tree_to_nav(tree: dict, parent_parts: list[str] | None = None, is_top_level: bool = True) -> list[Any]:
         """Convert the tree structure to navigation format."""
         if parent_parts is None:
             parent_parts = []
@@ -112,9 +112,13 @@ def build_hierarchical_navigation(
             
             if submodules:
                 # This has submodules - create a group
-                # Use fully qualified module name for the group
-                full_module_name = ".".join(current_parts)
-                group_entry = {"group": full_module_name, "pages": []}
+                # For top-level groups, use fully qualified name
+                # For nested groups, use just the last part
+                if is_top_level:
+                    group_name = ".".join(current_parts)
+                else:
+                    group_name = name
+                group_entry = {"group": group_name, "pages": []}
                 
                 # If this module itself exists (has a path), add it as __init__
                 if has_path:
@@ -131,8 +135,8 @@ def build_hierarchical_navigation(
                         if not skip_empty_parents or not is_module_empty(module_file):
                             group_entry["pages"].append(nav_path)
                 
-                # Add all submodules recursively
-                sub_pages = tree_to_nav(submodules, current_parts)
+                # Add all submodules recursively (nested groups don't use full names)
+                sub_pages = tree_to_nav(submodules, current_parts, is_top_level=False)
                 group_entry["pages"].extend(sub_pages)
                 
                 # Only add the group if it has content
@@ -152,7 +156,19 @@ def build_hierarchical_navigation(
         return result
     
     # Build the final navigation from the tree
-    return tree_to_nav(module_tree)
+    navigation = tree_to_nav(module_tree)
+    
+    # Sort the top-level entries for consistent output
+    # Sort groups by name, and put non-groups (plain pages) first
+    def sort_key(item):
+        if isinstance(item, dict) and "group" in item:
+            return (1, item["group"])  # Groups second, sorted by name
+        else:
+            return (0, str(item))  # Plain pages first, sorted by string value
+    
+    navigation.sort(key=sort_key)
+    
+    return navigation
 
 
 def find_mdxify_placeholder(obj: Any, path: list[str] | None = None) -> tuple[Any, list[str]] | None:

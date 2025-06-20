@@ -21,6 +21,7 @@ def test_build_hierarchical_navigation_simple(tmp_path):
     result = build_hierarchical_navigation(modules, tmp_path, skip_empty_parents=False)
     
     # Should have three top-level entries: flows, tasks, and blocks group
+    # Note: they should be sorted, so order is: plain pages first, then groups
     assert len(result) == 3
     
     # Find the blocks group
@@ -286,8 +287,35 @@ def test_navigation_path_calculation(tmp_path):
     assert "external-docs/mypackage-api" not in str(pages)
 
 
+def test_navigation_sorting(tmp_path):
+    """Test that navigation entries are sorted consistently."""
+    modules = [
+        "zebra",
+        "alpha",
+        "beta.sub1",
+        "beta.sub2", 
+        "charlie",
+    ]
+    
+    result = build_hierarchical_navigation(modules, tmp_path, skip_empty_parents=False)
+    
+    # Extract top-level names
+    top_level_names = []
+    for item in result:
+        if isinstance(item, str):
+            # Extract module name from filename
+            name = item.replace("-", ".").replace(".mdx", "")
+            top_level_names.append(name)
+        elif isinstance(item, dict) and "group" in item:
+            top_level_names.append(item["group"])
+    
+    # Should be sorted: plain pages first (alpha, charlie, zebra), then groups (beta)
+    expected_order = ["alpha", "charlie", "zebra", "beta"]
+    assert top_level_names == expected_order
+
+
 def test_hierarchical_navigation_with_fully_qualified_names(tmp_path):
-    """Test that hierarchical navigation uses fully qualified module names for groups."""
+    """Test that top-level groups use fully qualified names, but nested groups don't."""
     modules = [
         "fastmcp.cli",
         "fastmcp.cli.run",
@@ -301,27 +329,39 @@ def test_hierarchical_navigation_with_fully_qualified_names(tmp_path):
     # Find the CLI group
     cli_group = None
     for item in result:
-        if isinstance(item, dict) and "fastmcp.cli" in item.get("group", ""):
+        if isinstance(item, dict) and item.get("group", "").endswith("cli"):
             cli_group = item
             break
     
     assert cli_group is not None
-    assert cli_group["group"] == "fastmcp.cli"  # Should be fully qualified
+    assert cli_group["group"] == "fastmcp.cli"  # Top-level should be fully qualified
     
-    # Find the server.auth group
+    # Find the server group
     server_group = None
     for item in result:
-        if isinstance(item, dict) and "fastmcp.server" in item.get("group", ""):
+        if isinstance(item, dict) and item.get("group", "").endswith("server"):
             server_group = item
             break
     
     assert server_group is not None
+    assert server_group["group"] == "fastmcp.server"  # Top-level should be fully qualified
+    
     # Check for nested auth group
     auth_group = None
     for page in server_group["pages"]:
-        if isinstance(page, dict) and "fastmcp.server.auth" in page.get("group", ""):
+        if isinstance(page, dict) and "auth" in page.get("group", ""):
             auth_group = page
             break
     
     assert auth_group is not None
-    assert auth_group["group"] == "fastmcp.server.auth"  # Should be fully qualified
+    assert auth_group["group"] == "auth"  # Nested group should NOT be fully qualified
+    
+    # Check for deeply nested providers group
+    providers_group = None
+    for page in auth_group["pages"]:
+        if isinstance(page, dict) and "providers" in page.get("group", ""):
+            providers_group = page
+            break
+    
+    assert providers_group is not None
+    assert providers_group["group"] == "providers"  # Deeply nested should also not be fully qualified

@@ -185,7 +185,7 @@ def test_module_with_submodules_generates_init_file(test_package, tmp_path):
 
 
 def test_fully_qualified_group_names(test_package, tmp_path):
-    """Test that navigation groups use fully qualified module names."""
+    """Test that top-level navigation groups use fully qualified module names."""
     docs_dir = tmp_path / "docs"
     docs_dir.mkdir()
     docs_json = docs_dir / "docs.json"
@@ -225,5 +225,5 @@ def test_fully_qualified_group_names(test_package, tmp_path):
             break
     
     assert utils_group is not None
-    # Group name should be fully qualified
+    # Top-level group name should be fully qualified
     assert utils_group["group"] == "mypkg.utils"
