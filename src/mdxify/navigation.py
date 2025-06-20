@@ -29,35 +29,56 @@ def get_all_documented_modules(output_dir: Path) -> list[str]:
 def build_hierarchical_navigation(
     generated_modules: list[str], 
     output_dir: Path,
+    docs_root: Path | None = None,
     skip_empty_parents: bool = True
 ) -> list[dict[str, Any]]:
     """Build a hierarchical navigation structure from flat module names.
     
+    Args:
+        generated_modules: List of module names
+        output_dir: Directory where MDX files are written
+        docs_root: Root directory for docs (to calculate relative paths). If None, paths are relative to output_dir
+        skip_empty_parents: Whether to skip empty parent modules
+    
     Returns a list of navigation entries where each entry is either:
-    - A string (the filename without extension for a leaf module)
+    - A string (the path to the MDX file without extension)
     - A dict with "group" and "pages" keys for modules with submodules
     """
+    # Calculate the path prefix for navigation entries
+    if docs_root:
+        # Get relative path from docs root to output dir
+        try:
+            nav_prefix = output_dir.relative_to(docs_root)
+        except ValueError:
+            # output_dir is not under docs_root, use as-is
+            nav_prefix = Path()
+    else:
+        nav_prefix = Path()
+    
     # Group modules by their hierarchy
     module_tree = {}
+    
+    # First, collect all single-part modules (package roots)
+    root_modules = []
     
     for module_name in sorted(generated_modules):
         parts = module_name.split(".")
         
         if len(parts) == 1:
-            # Skip top-level module (just the package name itself)
-            continue
-            
-        # Navigate/create the tree structure
-        current = module_tree
-        for i, part in enumerate(parts[1:], 1):
-            if i == len(parts) - 1:
-                # This is the leaf module
-                current[part] = {"_is_leaf": True, "_full_name": module_name}
-            else:
-                # This is an intermediate module
-                if part not in current:
-                    current[part] = {}
-                current = current[part]
+            # This is a root module (e.g., 'fastmcp')
+            root_modules.append(module_name)
+        else:
+            # Navigate/create the tree structure for multi-part modules
+            current = module_tree
+            for i, part in enumerate(parts[1:], 1):
+                if i == len(parts) - 1:
+                    # This is the leaf module
+                    current[part] = {"_is_leaf": True, "_full_name": module_name}
+                else:
+                    # This is an intermediate module
+                    if part not in current:
+                        current[part] = {}
+                    current = current[part]
     
     def tree_to_nav(tree: dict, parent_parts: list[str] | None = None) -> list[Any]:
         """Convert the tree structure to navigation format."""
@@ -68,9 +89,13 @@ def build_hierarchical_navigation(
         
         for name, subtree in sorted(tree.items()):
             if subtree.get("_is_leaf"):
-                # This is a leaf module - just add the filename
+                # This is a leaf module - add the path to the file
                 filename = subtree["_full_name"].replace(".", "-")
-                result.append(filename)
+                if nav_prefix:
+                    nav_path = str(nav_prefix / filename).replace("\\", "/")
+                else:
+                    nav_path = filename
+                result.append(nav_path)
             else:
                 # This has submodules - create a group
                 group_entry = {"group": name, "pages": []}
@@ -83,7 +108,11 @@ def build_hierarchical_navigation(
                 
                 if init_file.exists():
                     if not skip_empty_parents or not is_module_empty(init_file):
-                        group_entry["pages"].append(init_filename)
+                        if nav_prefix:
+                            nav_path = str(nav_prefix / init_filename).replace("\\", "/")
+                        else:
+                            nav_path = init_filename
+                        group_entry["pages"].append(nav_path)
                 
                 # Add all submodules
                 sub_pages = tree_to_nav(subtree, current_parts)
@@ -95,11 +124,25 @@ def build_hierarchical_navigation(
         
         return result
     
-    # Start with the root package name from the first module
-    if generated_modules:
-        root_package = generated_modules[0].split(".")[0]
-        return tree_to_nav(module_tree, [root_package])
-    return []
+    # Build the final navigation
+    result = []
+    
+    # Add root modules first
+    for root_module in root_modules:
+        filename = root_module.replace(".", "-")
+        if nav_prefix:
+            nav_path = str(nav_prefix / filename).replace("\\", "/")
+        else:
+            nav_path = filename
+        result.append(nav_path)
+    
+    # Then add the hierarchical modules
+    if generated_modules and module_tree:
+        root_package = next((m.split(".")[0] for m in generated_modules if "." in m), None)
+        if root_package:
+            result.extend(tree_to_nav(module_tree, [root_package]))
+    
+    return result
 
 
 def find_mdxify_placeholder(obj: Any, path: list[str] | None = None) -> tuple[Any, list[str]] | None:
@@ -174,16 +217,19 @@ Alternatively, use --no-update-nav and manually add the generated files to your 
 
     container_info, path = result
     
+    # Try to determine docs root from docs.json location
+    docs_root = docs_json_path.parent
+    
     # Build navigation
     if regenerate_all:
         # Complete regeneration - use only the generated modules
-        navigation_pages = build_hierarchical_navigation(generated_modules, output_dir)
+        navigation_pages = build_hierarchical_navigation(generated_modules, output_dir, docs_root)
     else:
         # Merge mode - get all documented modules and build complete navigation
         all_modules = get_all_documented_modules(output_dir)
         # Filter to only include public modules
         public_modules = [m for m in all_modules if should_include_module(m)]
-        navigation_pages = build_hierarchical_navigation(public_modules, output_dir)
+        navigation_pages = build_hierarchical_navigation(public_modules, output_dir, docs_root)
 
     # Replace the placeholder
     if isinstance(container_info, tuple):

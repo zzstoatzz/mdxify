@@ -129,8 +129,8 @@ def test_update_docs_json_with_placeholder(tmp_path):
     # Should have: overview, core, utils, advanced
     assert len(api_pages) == 4
     assert api_pages[0] == "api/overview"
-    assert "mypackage-core" in api_pages
-    assert "mypackage-utils" in api_pages
+    assert "api/mypackage-core" in api_pages
+    assert "api/mypackage-utils" in api_pages
     assert api_pages[-1] == "api/advanced"
 
 
