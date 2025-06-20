@@ -30,7 +30,7 @@ def build_hierarchical_navigation(
     generated_modules: list[str], 
     output_dir: Path,
     docs_root: Path | None = None,
-    skip_empty_parents: bool = True
+    skip_empty_parents: bool = False
 ) -> list[dict[str, Any]]:
     """Build a hierarchical navigation structure from flat module names.
     
@@ -207,7 +207,8 @@ def update_docs_json(
     docs_json_path: Path, 
     generated_modules: list[str], 
     output_dir: Path,
-    regenerate_all: bool = False
+    regenerate_all: bool = False,
+    skip_empty_parents: bool = False
 ) -> None:
     """Update docs.json with generated module documentation.
     
@@ -249,13 +250,17 @@ Alternatively, use --no-update-nav and manually add the generated files to your 
     # Build navigation
     if regenerate_all:
         # Complete regeneration - use only the generated modules
-        navigation_pages = build_hierarchical_navigation(generated_modules, output_dir, docs_root)
+        navigation_pages = build_hierarchical_navigation(
+            generated_modules, output_dir, docs_root, skip_empty_parents=skip_empty_parents
+        )
     else:
         # Merge mode - get all documented modules and build complete navigation
         all_modules = get_all_documented_modules(output_dir)
         # Filter to only include public modules
         public_modules = [m for m in all_modules if should_include_module(m)]
-        navigation_pages = build_hierarchical_navigation(public_modules, output_dir, docs_root)
+        navigation_pages = build_hierarchical_navigation(
+            public_modules, output_dir, docs_root, skip_empty_parents=skip_empty_parents
+        )
 
     # Replace the placeholder
     if isinstance(container_info, tuple):

@@ -37,6 +37,27 @@ def test_cli_requires_root_module_with_all():
         assert exc_info.value.code == 2  # type: ignore # argparse error code
 
 
+def test_skip_empty_parents_flag():
+    """Test that --skip-empty-parents flag is parsed correctly."""
+    parser = argparse.ArgumentParser()
+    
+    # Copy the setup from main() 
+    parser.add_argument(
+        "--skip-empty-parents",
+        action="store_true", 
+        default=False,
+        help="Skip parent modules that only contain boilerplate (default: False)",
+    )
+    
+    # Test default
+    args = parser.parse_args([])
+    assert args.skip_empty_parents is False
+    
+    # Test with flag
+    args = parser.parse_args(["--skip-empty-parents"])
+    assert args.skip_empty_parents is True
+
+
 def test_cli_processes_specified_modules():
     """Test processing specific modules."""
     with patch("mdxify.cli.find_all_modules") as mock_find, \

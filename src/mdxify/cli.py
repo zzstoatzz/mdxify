@@ -47,6 +47,12 @@ def main():
         "--root-module",
         help="Root module to generate docs for (required when using --all)",
     )
+    parser.add_argument(
+        "--skip-empty-parents",
+        action="store_true",
+        default=False,
+        help="Skip parent modules that only contain boilerplate (default: False)",
+    )
 
     args = parser.parse_args()
 
@@ -144,7 +150,8 @@ def main():
                 docs_json_path, 
                 generated_modules, 
                 args.output_dir,
-                regenerate_all=regenerate_all
+                regenerate_all=regenerate_all,
+                skip_empty_parents=args.skip_empty_parents
             )
             print("Navigation updated successfully")
         else:

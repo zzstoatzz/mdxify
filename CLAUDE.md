@@ -24,13 +24,13 @@ A tool to generate MDX API documentation for Python packages with automatic Mint
 
 ### UV Usage (It's 2025!)
 - **Always use `uv run`** instead of calling Python directly
-- For testing local changes: `uv run --with-editable .` 
-- For testing specific versions: `uvx mdxify@version`
-- Don't use `python -m` directly when uv is available
+- For testing local changes: `uv run` will use the editable version of the package
+- For testing specific versions from PyPI: `uvx mdxify@version`
+- Use `uv run -m` not `python -m` to run modules
 
 ### Testing Before Releasing
 - **Always test your changes** before cutting a release
-- Run the full test suite: `uv run pytest -xvs`
+- Run the full test suite: `uv run pytest -xvs`, run a single test: `uv run pytest -xvs -k test_function_name`
 - For navigation/output changes, test on a real project (like FastMCP)
 - Don't push and release without verifying the changes work
 
