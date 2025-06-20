@@ -1,56 +1,56 @@
-# Adopting mdxify in Your Project
+# Using mdxify
 
-This guide walks you through integrating mdxify into your Python project to generate beautiful MDX API documentation.
+## Quick Start
 
-## Prerequisites
-
-- Python 3.10+
-- A Python package with docstrings (Google-style recommended)
-- A documentation framework that supports MDX (e.g., Mintlify, Docusaurus, Next.js)
-
-## Installation
-
-### Using pip
+### Run without installing (using uvx)
 ```bash
-pip install mdxify
+uvx mdxify --help
 ```
 
-### Using uv
+### Basic Commands
+
+**Generate docs for everything in a package:**
 ```bash
-uv add mdxify
+mdxify --all
+```
+(Defaults to looking for a package called `prefect`)
+
+**Generate docs for your package:**
+```bash
+mdxify --all --root-module mypackage
 ```
 
-### For development/CI
+**Generate docs for specific modules only:**
 ```bash
-pip install --pre mdxify  # For pre-releases
+mdxify mypackage.core mypackage.api mypackage.models
 ```
 
-## Basic Usage
-
-### 1. Generate Documentation for Your Entire Package
-
+**Change output directory:**
 ```bash
-mdxify --all --root-module mypackage --output-dir docs/api
+mdxify --all --output-dir docs/api
+```
+(Default is `docs/v3/api-ref`)
+
+**Skip navigation file updates:**
+```bash
+mdxify --all --no-update-nav
 ```
 
-This will:
-- Scan all modules in `mypackage`
-- Generate MDX files in `docs/api/`
-- Create a hierarchical structure matching your package layout
+## What It Does
 
-### 2. Generate Documentation for Specific Modules
+1. Reads your Python files using AST (doesn't import them)
+2. Extracts classes, functions, methods, and their docstrings
+3. Generates `.mdx` files with formatted documentation
+4. Optionally updates a `docs.json` navigation file
 
-```bash
-mdxify mypackage.core mypackage.utils --output-dir docs/api
-```
+## Output
 
-### 3. Exclude Navigation Updates
+For a module like `mypackage.core.auth`, you get:
+- File: `docs/api/mypackage-core-auth.mdx`
+- Contains: All public classes, functions, methods with their signatures and docstrings
+- Formatted: MDX with proper escaping for type annotations
 
-If you're managing navigation manually:
-
-```bash
-mdxify --all --root-module mypackage --output-dir docs/api --no-update-nav
-```
+That's it. Run it, get MDX files.
 
 ## Integration Examples
 
