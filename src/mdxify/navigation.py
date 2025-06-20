@@ -59,7 +59,7 @@ def build_hierarchical_navigation(
                     current[part] = {}
                 current = current[part]
     
-    def tree_to_nav(tree: dict, parent_parts: list[str] = None) -> list[Any]:
+    def tree_to_nav(tree: dict, parent_parts: list[str] | None = None) -> list[Any]:
         """Convert the tree structure to navigation format."""
         if parent_parts is None:
             parent_parts = []
@@ -102,7 +102,7 @@ def build_hierarchical_navigation(
     return []
 
 
-def find_mdxify_placeholder(obj: Any, path: list[str] = None) -> tuple[Any, list[str]] | None:
+def find_mdxify_placeholder(obj: Any, path: list[str] | None = None) -> tuple[Any, list[str]] | None:
     """Recursively find the $mdxify placeholder in a nested structure.
     
     Returns the parent container and path to the placeholder, or None if not found.
