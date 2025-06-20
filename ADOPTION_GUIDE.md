@@ -9,12 +9,6 @@ uvx mdxify --help
 
 ### Basic Commands
 
-**Generate docs for everything in a package:**
-```bash
-mdxify --all
-```
-(Defaults to looking for a package called `prefect`)
-
 **Generate docs for your package:**
 ```bash
 mdxify --all --root-module mypackage
@@ -27,13 +21,13 @@ mdxify mypackage.core mypackage.api mypackage.models
 
 **Change output directory:**
 ```bash
-mdxify --all --output-dir docs/api
+mdxify --all --root-module mypackage --output-dir docs/api
 ```
-(Default is `docs/v3/api-ref`)
+(Default is `docs/api`)
 
 **Skip navigation file updates:**
 ```bash
-mdxify --all --no-update-nav
+mdxify --all --root-module mypackage --no-update-nav
 ```
 
 ## What It Does

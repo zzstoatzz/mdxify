@@ -28,8 +28,8 @@ def main():
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default="docs/v3/api-ref",
-        help="Output directory for generated MDX files",
+        default="docs/api",
+        help="Output directory for generated MDX files (default: docs/api)",
     )
     parser.add_argument(
         "--update-nav",
@@ -45,20 +45,25 @@ def main():
     )
     parser.add_argument(
         "--root-module",
-        default="prefect",
-        help="Root module to generate docs for (default: prefect)",
+        help="Root module to generate docs for (required when using --all)",
     )
 
     args = parser.parse_args()
 
+    # Validate arguments
+    if args.all and not args.root_module:
+        parser.error("--root-module is required when using --all")
+
     # Determine which modules to process
     modules_to_process = []
 
-    if args.all or (not args.modules):
+    if args.all:
         # Generate all modules under root
         print(f"Finding all {args.root_module} modules...")
         modules_to_process = find_all_modules(args.root_module)
         print(f"Found {len(modules_to_process)} modules")
+    elif not args.modules:
+        parser.error("Either specify modules to document or use --all with --root-module")
     else:
         # Process specified modules and their submodules
         for module in args.modules:
@@ -136,7 +141,10 @@ def main():
             # Only do complete regeneration when --all is used
             regenerate_all = args.all or (not args.modules)
             update_docs_json(
-                docs_json_path, generated_modules, regenerate_all=regenerate_all
+                docs_json_path, 
+                generated_modules, 
+                args.output_dir,
+                regenerate_all=regenerate_all
             )
             print("Navigation updated successfully")
         else:

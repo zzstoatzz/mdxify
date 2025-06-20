@@ -4,13 +4,17 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .discovery import should_include_module
 from .generator import is_module_empty
 
 
 def get_all_documented_modules(output_dir: Path) -> list[str]:
     """Get all modules that have documentation files."""
     modules = []
-    for mdx_file in output_dir.glob("prefect-*.mdx"):
+    for mdx_file in output_dir.glob("*.mdx"):
+        # Skip non-module files (like index.mdx)
+        if "-" not in mdx_file.stem:
+            continue
         # Convert filename back to module name
         stem = mdx_file.stem
         # Handle __init__ files
@@ -23,110 +27,94 @@ def get_all_documented_modules(output_dir: Path) -> list[str]:
 
 
 def build_hierarchical_navigation(
-    generated_modules: list[str], skip_empty_parents: bool = True
-) -> list[Any]:
-    """Build a hierarchical navigation structure from flat module names."""
-    # Group modules by top-level module
+    generated_modules: list[str], 
+    output_dir: Path,
+    skip_empty_parents: bool = True
+) -> list[dict[str, Any]]:
+    """Build a hierarchical navigation structure from flat module names.
+    
+    Returns a list of navigation entries where each entry is either:
+    - A string (the filename without extension for a leaf module)
+    - A dict with "group" and "pages" keys for modules with submodules
+    """
+    # Group modules by their hierarchy
     module_tree = {}
-
+    
     for module_name in sorted(generated_modules):
         parts = module_name.split(".")
-
+        
         if len(parts) == 1:
-            # Top-level module (e.g., 'prefect')
+            # Skip top-level module (just the package name itself)
             continue
-        elif len(parts) == 2:
-            # Direct module (e.g., 'prefect.flows')
-            module_tree[parts[1]] = {
-                "path": f"v3/api-ref/{module_name.replace('.', '-')}",
-                "submodules": {},
-            }
-        else:
-            # Submodule (e.g., 'prefect.blocks.core')
-            top_module = parts[1]
-            if top_module not in module_tree:
-                module_tree[top_module] = {
-                    "path": f"v3/api-ref/prefect-{top_module}",
-                    "submodules": {},
-                }
-
-            # Build nested structure
-            current = module_tree[top_module]["submodules"]
-            for i, part in enumerate(parts[2:], 2):
-                if i == len(parts) - 1:
-                    # Leaf node
-                    current[part] = {
-                        "path": f"v3/api-ref/{module_name.replace('.', '-')}",
-                        "submodules": {},
-                    }
-                else:
-                    # Intermediate node
-                    if part not in current:
-                        current[part] = {"path": None, "submodules": {}}
-                    current = current[part]["submodules"]
-
-    # Convert tree to navigation format
-    def tree_to_nav(tree: dict, level: int = 0) -> list[Any]:
+            
+        # Navigate/create the tree structure
+        current = module_tree
+        for i, part in enumerate(parts[1:], 1):
+            if i == len(parts) - 1:
+                # This is the leaf module
+                current[part] = {"_is_leaf": True, "_full_name": module_name}
+            else:
+                # This is an intermediate module
+                if part not in current:
+                    current[part] = {}
+                current = current[part]
+    
+    def tree_to_nav(tree: dict, parent_parts: list[str] = None) -> list[Any]:
+        """Convert the tree structure to navigation format."""
+        if parent_parts is None:
+            parent_parts = []
+            
         result = []
-
-        for name, info in sorted(tree.items()):
-            if info["submodules"]:
-                # Has submodules - create a group
+        
+        for name, subtree in sorted(tree.items()):
+            if subtree.get("_is_leaf"):
+                # This is a leaf module - just add the filename
+                filename = subtree["_full_name"].replace(".", "-")
+                result.append(filename)
+            else:
+                # This has submodules - create a group
                 group_entry = {"group": name, "pages": []}
-
-                # If the parent module has content, add it as __init__ inside the group
-                if info["path"]:
-                    # Check if the file exists with __init__ suffix
-                    parent_path = info["path"] + "-__init__"
-                    module_file = Path(
-                        parent_path.replace("v3/api-ref/", "docs/v3/api-ref/") + ".mdx"
-                    )
-
-                    if module_file.exists():
-                        if skip_empty_parents:
-                            if not is_module_empty(module_file):
-                                group_entry["pages"].append(parent_path)
-                        else:
-                            group_entry["pages"].append(parent_path)
-                    else:
-                        # Try the original path (for backwards compatibility)
-                        module_file = Path(
-                            info["path"].replace("v3/api-ref/", "docs/v3/api-ref/")
-                            + ".mdx"
-                        )
-                        if module_file.exists():
-                            if skip_empty_parents:
-                                if not is_module_empty(module_file):
-                                    group_entry["pages"].append(info["path"])
-                            else:
-                                group_entry["pages"].append(info["path"])
-
-                # Add submodules
-                group_entry["pages"].extend(tree_to_nav(info["submodules"], level + 1))
-
-                # Only add the group if it has pages
+                
+                # Check if this module itself has documentation (as __init__)
+                current_parts = parent_parts + [name]
+                module_name = ".".join(current_parts)
+                init_filename = f"{module_name.replace('.', '-')}-__init__"
+                init_file = output_dir / f"{init_filename}.mdx"
+                
+                if init_file.exists():
+                    if not skip_empty_parents or not is_module_empty(init_file):
+                        group_entry["pages"].append(init_filename)
+                
+                # Add all submodules
+                sub_pages = tree_to_nav(subtree, current_parts)
+                group_entry["pages"].extend(sub_pages)
+                
+                # Only add the group if it has content
                 if group_entry["pages"]:
                     result.append(group_entry)
-            else:
-                # No submodules - just add the path
-                if info["path"]:
-                    result.append(info["path"])
-
+        
         return result
-
-    return tree_to_nav(module_tree)
+    
+    # Start with the root package name from the first module
+    if generated_modules:
+        root_package = generated_modules[0].split(".")[0]
+        return tree_to_nav(module_tree, [root_package])
+    return []
 
 
 def update_docs_json(
-    docs_json_path: Path, generated_modules: list[str], regenerate_all: bool = False
+    docs_json_path: Path, 
+    generated_modules: list[str], 
+    output_dir: Path,
+    regenerate_all: bool = False
 ) -> None:
     """Update docs.json with generated module documentation.
-    Args:
-        docs_json_path: Path to docs.json file
-        generated_modules: List of modules that were just generated
-        regenerate_all: If True, completely regenerate the navigation. If False, merge with existing.
+    
+    This is Prefect-specific and probably shouldn't be used for other projects.
+    Consider using build_hierarchical_navigation directly instead.
     """
-    docs_config = json.loads(docs_json_path.read_text())
+    with open(docs_json_path, "r") as f:
+        docs_config = json.load(f)
 
     # Find the API Reference tab
     api_ref_tab = None
@@ -174,19 +162,30 @@ def update_docs_json(
     # Build navigation
     if regenerate_all:
         # Complete regeneration - use only the generated modules
-        navigation_pages = build_hierarchical_navigation(generated_modules)
+        navigation_pages = build_hierarchical_navigation(generated_modules, output_dir)
     else:
         # Merge mode - get all documented modules and build complete navigation
-        from .discovery import should_include_module
-
-        output_dir = Path("docs/v3/api-ref")
         all_modules = get_all_documented_modules(output_dir)
         # Filter to only include public modules
         public_modules = [m for m in all_modules if should_include_module(m)]
-        navigation_pages = build_hierarchical_navigation(public_modules)
+        navigation_pages = build_hierarchical_navigation(public_modules, output_dir)
 
+    # Need to prepend the path prefix to match existing structure
+    # This is the problematic part - it assumes a specific docs structure
+    def add_path_prefix(nav_item, prefix="v3/api-ref"):
+        if isinstance(nav_item, str):
+            return f"{prefix}/{nav_item}"
+        elif isinstance(nav_item, dict) and "pages" in nav_item:
+            nav_item["pages"] = [add_path_prefix(page, prefix) for page in nav_item["pages"]]
+            return nav_item
+        return nav_item
+
+    prefixed_pages = [add_path_prefix(page) for page in navigation_pages]
+    
     # Always include the Python SDK overview page at the beginning
-    sdk_group["pages"] = ["v3/api-ref/python/index"] + navigation_pages
+    sdk_group["pages"] = ["v3/api-ref/python/index"] + prefixed_pages
 
     # Write back to docs.json
-    docs_json_path.write_text(json.dumps(docs_config, indent=2) + "\n")
+    with open(docs_json_path, "w") as f:
+        json.dump(docs_config, f, indent=2)
+        f.write("\n")  # Add trailing newline

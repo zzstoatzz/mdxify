@@ -24,10 +24,10 @@ mdxify mypackage.core mypackage.utils --output-dir docs/api
 
 ### Options
 
-- `modules`: Specific modules to document (if none specified, generates all)
+- `modules`: Specific modules to document
 - `--all`: Generate documentation for all modules under the root module
-- `--root-module`: Root module to generate docs for (default: prefect)
-- `--output-dir`: Output directory for generated MDX files (default: docs/v3/api-ref)
+- `--root-module`: Root module to generate docs for (required when using --all)
+- `--output-dir`: Output directory for generated MDX files (default: docs/api)
 - `--update-nav/--no-update-nav`: Update docs.json navigation (default: True)
 
 ## Features

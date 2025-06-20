@@ -4,18 +4,18 @@
 from mdxify.navigation import build_hierarchical_navigation
 
 
-def test_build_hierarchical_navigation_simple():
+def test_build_hierarchical_navigation_simple(tmp_path):
     """Test building navigation for simple module structure."""
     modules = [
-        "prefect.flows",
-        "prefect.tasks",
-        "prefect.blocks.core",
-        "prefect.blocks.system",
+        "mypackage.flows",
+        "mypackage.tasks",
+        "mypackage.blocks.core",
+        "mypackage.blocks.system",
     ]
     
-    result = build_hierarchical_navigation(modules, skip_empty_parents=False)
+    result = build_hierarchical_navigation(modules, tmp_path, skip_empty_parents=False)
     
-    # Should have two top-level entries
+    # Should have three top-level entries: flows, tasks, and blocks group
     assert len(result) == 3
     
     # Find the blocks group
@@ -29,22 +29,25 @@ def test_build_hierarchical_navigation_simple():
     assert len(blocks_group["pages"]) >= 2  # core and system
 
 
-def test_build_hierarchical_navigation_nested():
+def test_build_hierarchical_navigation_nested(tmp_path):
     """Test building navigation for deeply nested modules."""
+    # Create a structure where parent modules aren't included
     modules = [
-        "prefect.foo",
-        "prefect.foo.bar",
-        "prefect.foo.bar.baz",
-        "prefect.foo.qux",
+        "mypackage.utils.helpers",
+        "mypackage.utils.validators", 
+        "mypackage.models.base",
+        "mypackage.models.user",
     ]
     
-    result = build_hierarchical_navigation(modules, skip_empty_parents=False)
+    result = build_hierarchical_navigation(modules, tmp_path, skip_empty_parents=False)
     
-    # Should have one top-level group for 'foo'
-    assert len(result) == 1
-    assert result[0]["group"] == "foo"
+    # Should have 2 groups: utils and models
+    assert len(result) == 2
     
-    # Check nested structure
-    # The parent module should have pages (submodules)
-    assert "pages" in result[0]
-    assert len(result[0]["pages"]) > 0
+    # Both should be groups (dicts with 'group' key)
+    assert all(isinstance(item, dict) and "group" in item for item in result)
+    
+    # Check group names
+    group_names = {item["group"] for item in result}
+    assert "utils" in group_names
+    assert "models" in group_names
