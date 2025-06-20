@@ -3,7 +3,7 @@
 import argparse
 import sys
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -34,7 +34,7 @@ def test_cli_requires_root_module_with_all():
     with patch.object(sys, "argv", ["mdxify", "--all"]):
         with pytest.raises(SystemExit) as exc_info:
             main()
-        assert exc_info.value.code == 2  # argparse error code
+        assert exc_info.value.code == 2  # type: ignore # argparse error code
 
 
 def test_cli_processes_specified_modules():
@@ -54,7 +54,7 @@ def test_cli_processes_specified_modules():
         with pytest.raises(SystemExit) as exc_info:
             main()
         
-        assert exc_info.value.code == 0
+        assert exc_info.value.code == 0  # type: ignore
         
         # Verify module was processed
         mock_parse.assert_called_once_with("mypackage.core", Path("mypackage/core.py"))

@@ -1,6 +1,19 @@
-# Development Notes for Claude
+# mdxify
 
-## Common Pitfalls to Avoid
+A tool to generate MDX API documentation for Python packages with automatic Mintlify navigation integration.
+
+## Project Overview
+
+**mdxify** converts Python docstrings into MDX format documentation. Key features:
+- Parses Python modules using AST (no imports required)
+- Generates hierarchical navigation structure
+- Integrates with Mintlify via placeholder replacement (`{"$mdxify": "generated"}`)
+- Formats Google-style docstrings using Griffe
+- Default output: `docs/python-sdk/`
+
+## Development Notes for Claude
+
+### Common Pitfalls to Avoid
 
 ### Working Directory Management
 - **Always verify your current directory** with `pwd` before running commands
@@ -27,6 +40,8 @@
 - Ask for clarification if the goal isn't clear rather than making assumptions
 
 ### Git and Releases
+- **ALWAYS run pre-commit before pushing**: `uv run pre-commit run --all-files`
+- Or better: install pre-commit hooks: `uv run pre-commit install`
 - Commit messages should be clear and describe what changed
 - Always push to main before creating a release
 - Use `gh release create` for releases - GitHub Actions handles PyPI publishing
