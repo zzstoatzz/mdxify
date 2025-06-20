@@ -60,3 +60,24 @@ def test_format_docstring_with_griffe_simple():
     result = format_docstring_with_griffe(docstring)
     assert isinstance(result, str)
     assert len(result) > 0
+
+
+def test_format_docstring_escapes_colons_in_args():
+    """Test that colons in parameter descriptions are escaped."""
+    docstring = '''
+    OAuth client implementation.
+    
+    Args:
+        mcp_url: Full URL to the MCP endpoint (e.g., "http://host/mcp/sse/")
+        scopes: OAuth scopes to request: Can be a space-separated string
+    
+    Raises:
+        ValueError: If the URL is invalid: missing protocol or host
+    '''
+    
+    result = format_docstring_with_griffe(docstring)
+    
+    # Check that colons in descriptions are escaped
+    assert '- `mcp_url`: Full URL to the MCP endpoint (e.g., "http\\://host/mcp/sse/")' in result
+    assert "- `scopes`: OAuth scopes to request\\: Can be a space-separated string" in result
+    assert "- `ValueError`: If the URL is invalid\\: missing protocol or host" in result

@@ -29,6 +29,8 @@ def format_docstring_with_griffe(docstring: str) -> str:
                 for param in section.value:
                     name = param.name
                     desc = param.description if hasattr(param, "description") else ""
+                    # Escape colons in the description to prevent Markdown definition list interpretation
+                    desc = desc.replace(":", "\\:")
                     # Format as a list item
                     lines.append(f"- `{name}`: {desc}")
                 lines.append("")
@@ -56,6 +58,8 @@ def format_docstring_with_griffe(docstring: str) -> str:
                 for exc in section.value:
                     name = exc.annotation if hasattr(exc, "annotation") else ""
                     desc = exc.description if hasattr(exc, "description") else ""
+                    # Escape colons in the description to prevent Markdown definition list interpretation
+                    desc = desc.replace(":", "\\:")
                     lines.append(f"- `{name}`: {desc}")
                 lines.append("")
 
