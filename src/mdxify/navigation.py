@@ -58,8 +58,24 @@ def build_hierarchical_navigation(
     # Group modules by their hierarchy
     module_tree = {}
     
+    # Find the common root package if all modules share one
+    root_package = None
+    if generated_modules:
+        first_parts = generated_modules[0].split(".")
+        if len(first_parts) > 1:
+            potential_root = first_parts[0]
+            # Check if all modules start with this root
+            if all(m.startswith(potential_root + ".") or m == potential_root for m in generated_modules):
+                root_package = potential_root
+    
     for module_name in sorted(generated_modules):
         parts = module_name.split(".")
+        
+        # Skip the root package if we have one
+        if root_package and parts[0] == root_package:
+            parts = parts[1:]
+            if not parts:  # This was just the root package itself
+                continue
         
         # Navigate/create the tree structure
         current = module_tree
@@ -77,6 +93,9 @@ def build_hierarchical_navigation(
         """Convert the tree structure to navigation format."""
         if parent_parts is None:
             parent_parts = []
+            # If we have a root package, start with it
+            if root_package:
+                parent_parts = [root_package]
             
         result = []
         
@@ -104,58 +123,29 @@ def build_hierarchical_navigation(
                     nav_path = filename
                 result.append(nav_path)
             else:
-                # This has submodules - could be a package root or intermediate module
-                # Check if this is a root-level module with submodules
-                if len(current_parts) == 1:
-                    # This is a root package (e.g., 'fastmcp') - add it directly if it exists
-                    root_module_name = name
-                    
-                    # Check if this root module has submodules
-                    has_submodules = any(
-                        m.startswith(root_module_name + ".") 
-                        for m in generated_modules
-                    )
-                    
-                    if has_submodules:
-                        root_filename = f"{root_module_name}-__init__"
-                    else:
-                        root_filename = root_module_name
-                        
-                    root_file = output_dir / f"{root_filename}.mdx"
-                    if root_file.exists():
+                # This has submodules - create a group
+                group_entry = {"group": name, "pages": []}
+                
+                # Check if this module itself has documentation (as __init__)
+                module_name = ".".join(current_parts)
+                init_filename = f"{module_name.replace('.', '-')}-__init__"
+                init_file = output_dir / f"{init_filename}.mdx"
+                
+                if init_file.exists():
+                    if not skip_empty_parents or not is_module_empty(init_file):
                         if nav_prefix:
-                            nav_path = str(nav_prefix / root_filename).replace("\\", "/")
+                            nav_path = str(nav_prefix / init_filename).replace("\\", "/")
                         else:
-                            nav_path = root_filename
-                        result.append(nav_path)
-                    
-                    # Add all its submodules
-                    sub_pages = tree_to_nav(subtree, current_parts)
-                    result.extend(sub_pages)
-                else:
-                    # This is an intermediate module - create a group
-                    group_entry = {"group": name, "pages": []}
-                    
-                    # Check if this module itself has documentation (as __init__)
-                    module_name = ".".join(current_parts)
-                    init_filename = f"{module_name.replace('.', '-')}-__init__"
-                    init_file = output_dir / f"{init_filename}.mdx"
-                    
-                    if init_file.exists():
-                        if not skip_empty_parents or not is_module_empty(init_file):
-                            if nav_prefix:
-                                nav_path = str(nav_prefix / init_filename).replace("\\", "/")
-                            else:
-                                nav_path = init_filename
-                            group_entry["pages"].append(nav_path)
-                    
-                    # Add all submodules
-                    sub_pages = tree_to_nav(subtree, current_parts)
-                    group_entry["pages"].extend(sub_pages)
-                    
-                    # Only add the group if it has content
-                    if group_entry["pages"]:
-                        result.append(group_entry)
+                            nav_path = init_filename
+                        group_entry["pages"].append(nav_path)
+                
+                # Add all submodules
+                sub_pages = tree_to_nav(subtree, current_parts)
+                group_entry["pages"].extend(sub_pages)
+                
+                # Only add the group if it has content
+                if group_entry["pages"]:
+                    result.append(group_entry)
         
         return result
     
