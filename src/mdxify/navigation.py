@@ -85,7 +85,19 @@ def build_hierarchical_navigation(
             
             if subtree.get("_is_leaf"):
                 # This is a leaf module - add the path to the file
-                filename = subtree["_full_name"].replace(".", "-")
+                full_name = subtree["_full_name"]
+                filename = full_name.replace(".", "-")
+                
+                # Check if this module has submodules - if so, it's saved as __init__
+                has_submodules = any(
+                    name.startswith(full_name + ".") 
+                    for name in generated_modules 
+                    if name != full_name
+                )
+                
+                if has_submodules:
+                    filename = f"{filename}-__init__"
+                
                 if nav_prefix:
                     nav_path = str(nav_prefix / filename).replace("\\", "/")
                 else:
@@ -96,7 +108,19 @@ def build_hierarchical_navigation(
                 # Check if this is a root-level module with submodules
                 if len(current_parts) == 1:
                     # This is a root package (e.g., 'fastmcp') - add it directly if it exists
-                    root_filename = name
+                    root_module_name = name
+                    
+                    # Check if this root module has submodules
+                    has_submodules = any(
+                        m.startswith(root_module_name + ".") 
+                        for m in generated_modules
+                    )
+                    
+                    if has_submodules:
+                        root_filename = f"{root_module_name}-__init__"
+                    else:
+                        root_filename = root_module_name
+                        
                     root_file = output_dir / f"{root_filename}.mdx"
                     if root_file.exists():
                         if nav_prefix:
