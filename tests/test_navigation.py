@@ -156,9 +156,10 @@ def test_update_docs_json_without_placeholder(tmp_path, capsys):
     output_dir.mkdir()
     
     # Update docs.json
-    update_docs_json(docs_json, [], output_dir)
+    result = update_docs_json(docs_json, [], output_dir)
     
-    # Should print warning
+    # Should return False and print warning
+    assert result is False
     captured = capsys.readouterr()
     assert "Could not find mdxify anchor 'SDK Reference' or placeholder" in captured.out
     assert '{"$mdxify": "generated"}' in captured.out
@@ -314,25 +315,27 @@ def test_navigation_sorting(tmp_path):
     assert top_level_names == expected_order
 
 
-def test_update_existing_anchor(tmp_path):
-    """Test updating an existing anchor instead of placeholder."""
-    # Create a docs.json with existing anchor
+def test_update_mintlify_format_anchor(tmp_path):
+    """Test updating an existing anchor in Mintlify format (navigation.anchors)."""
+    # Create a docs.json with Mintlify format
     docs_json = tmp_path / "docs.json"
     docs_config = {
         "name": "Test Project",
-        "navigation": [
-            {
-                "anchor": "SDK Reference",
-                "groups": [
-                    {
-                        "group": "Modules",
-                        "pages": [
-                            "python-sdk/old-module"  # Existing entry
-                        ]
-                    }
-                ]
-            }
-        ]
+        "navigation": {
+            "anchors": [
+                {
+                    "anchor": "Getting Started",
+                    "pages": ["intro", "quickstart"]
+                },
+                {
+                    "anchor": "SDK Reference",
+                    "icon": "code",
+                    "pages": [
+                        "python-sdk/old-module"  # Existing entry
+                    ]
+                }
+            ]
+        }
     }
     
     with open(docs_json, "w") as f:
@@ -346,18 +349,23 @@ def test_update_existing_anchor(tmp_path):
     
     # Update docs.json
     generated_modules = ["mypackage.core", "mypackage.utils"]
-    update_docs_json(docs_json, generated_modules, output_dir, regenerate_all=True)
+    result = update_docs_json(docs_json, generated_modules, output_dir, regenerate_all=True)
+    
+    # Should succeed
+    assert result is True
     
     # Check the result
     with open(docs_json) as f:
         updated_config = json.load(f)
     
     # Should have replaced the old pages with new ones
-    pages = updated_config["navigation"][0]["groups"][0]["pages"]
+    pages = updated_config["navigation"]["anchors"][1]["pages"]
     assert len(pages) == 2
     assert "python-sdk/mypackage-core" in pages
     assert "python-sdk/mypackage-utils" in pages
     assert "python-sdk/old-module" not in pages  # Old entry should be gone
+    # Icon should be preserved
+    assert updated_config["navigation"]["anchors"][1]["icon"] == "code"
 
 
 def test_hierarchical_navigation_with_fully_qualified_names(tmp_path):
