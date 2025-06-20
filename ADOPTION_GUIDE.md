@@ -46,6 +46,34 @@ For a module like `mypackage.core.auth`, you get:
 
 That's it. Run it, get MDX files.
 
+## Navigation Updates
+
+If your documentation framework uses a `docs.json` file (like Mintlify), mdxify can automatically update your navigation. Add this placeholder where you want the API docs to appear:
+
+```json
+{
+  "navigation": {
+    "anchors": [
+      {
+        "anchor": "API Reference",
+        "groups": [
+          {
+            "group": "Python API",
+            "pages": [
+              "api/overview",
+              {"$mdxify": "generated"},
+              "api/advanced"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+mdxify will replace `{"$mdxify": "generated"}` with your module structure. Without this placeholder, you'll see a warning and need to manually add the generated files to your navigation.
+
 ## GitHub Actions Example
 
 Create `.github/workflows/docs.yml`:

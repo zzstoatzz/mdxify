@@ -102,6 +102,38 @@ def build_hierarchical_navigation(
     return []
 
 
+def find_mdxify_placeholder(obj: Any, path: list[str] = None) -> tuple[Any, list[str]] | None:
+    """Recursively find the $mdxify placeholder in a nested structure.
+    
+    Returns the parent container and path to the placeholder, or None if not found.
+    """
+    if path is None:
+        path = []
+        
+    if isinstance(obj, dict):
+        # Check if this dict is the placeholder
+        if obj.get("$mdxify") == "generated":
+            return obj, path
+            
+        # Recursively search all values
+        for key, value in obj.items():
+            result = find_mdxify_placeholder(value, path + [key])
+            if result:
+                return result
+                
+    elif isinstance(obj, list):
+        # Search through list items
+        for i, item in enumerate(obj):
+            if isinstance(item, dict) and item.get("$mdxify") == "generated":
+                # Found it - return the list and index
+                return (obj, i), path
+            result = find_mdxify_placeholder(item, path + [i])
+            if result:
+                return result
+                
+    return None
+
+
 def update_docs_json(
     docs_json_path: Path, 
     generated_modules: list[str], 
@@ -110,55 +142,38 @@ def update_docs_json(
 ) -> None:
     """Update docs.json with generated module documentation.
     
-    This is Prefect-specific and probably shouldn't be used for other projects.
-    Consider using build_hierarchical_navigation directly instead.
+    Looks for {"$mdxify": "generated"} placeholder and replaces it with
+    the generated navigation structure.
     """
     with open(docs_json_path, "r") as f:
         docs_config = json.load(f)
 
-    # Find the API Reference tab
-    api_ref_tab = None
-    for tab in docs_config.get("navigation", {}).get("tabs", []):
-        if tab.get("tab") == "API Reference":
-            api_ref_tab = tab
-            break
+    # Find the placeholder
+    result = find_mdxify_placeholder(docs_config)
+    
+    if not result:
+        print("""
+Warning: Could not find mdxify placeholder in docs.json
 
-    if not api_ref_tab:
-        print("Warning: Could not find API Reference tab in docs.json")
+To use automatic navigation updates, add a placeholder in your docs.json:
+
+{
+  "navigation": [
+    {
+      "group": "API Reference", 
+      "pages": [
+        {"$mdxify": "generated"}
+      ]
+    }
+  ]
+}
+
+Alternatively, use --no-update-nav and manually add the generated files to your navigation.
+""")
         return
 
-    # API Reference tab uses "groups" not "pages"
-    groups = api_ref_tab.get("groups", [])
-    if not groups:
-        print("Warning: API Reference tab has no groups")
-        return
-
-    # Find the main API Reference group
-    api_ref_group = None
-    for group in groups:
-        if group.get("group") == "API Reference":
-            api_ref_group = group
-            break
-
-    if not api_ref_group:
-        print("Warning: Could not find API Reference group")
-        return
-
-    # Find or create Python SDK Reference group within the pages
-    pages = api_ref_group.get("pages", [])
-    sdk_group = None
-
-    for i, page in enumerate(pages):
-        if isinstance(page, dict) and page.get("group") == "Python SDK Reference":
-            sdk_group = page
-            break
-
-    if not sdk_group:
-        # Create the group
-        sdk_group = {"group": "Python SDK Reference", "pages": []}
-        # Insert after the overview page (index.mdx)
-        pages.insert(1, sdk_group)
-
+    container_info, path = result
+    
     # Build navigation
     if regenerate_all:
         # Complete regeneration - use only the generated modules
@@ -170,22 +185,21 @@ def update_docs_json(
         public_modules = [m for m in all_modules if should_include_module(m)]
         navigation_pages = build_hierarchical_navigation(public_modules, output_dir)
 
-    # Need to prepend the path prefix to match existing structure
-    # This is the problematic part - it assumes a specific docs structure
-    def add_path_prefix(nav_item, prefix="v3/api-ref"):
-        if isinstance(nav_item, str):
-            return f"{prefix}/{nav_item}"
-        elif isinstance(nav_item, dict) and "pages" in nav_item:
-            nav_item["pages"] = [add_path_prefix(page, prefix) for page in nav_item["pages"]]
-            return nav_item
-        return nav_item
-
-    prefixed_pages = [add_path_prefix(page) for page in navigation_pages]
-    
-    # Always include the Python SDK overview page at the beginning
-    sdk_group["pages"] = ["v3/api-ref/python/index"] + prefixed_pages
+    # Replace the placeholder
+    if isinstance(container_info, tuple):
+        # It's in a list
+        container, index = container_info
+        # Replace the placeholder with the generated pages
+        container[index:index+1] = navigation_pages
+    else:
+        # It's a direct dict reference - this shouldn't happen with current logic
+        # but keeping for safety
+        print("Warning: Unexpected placeholder location")
+        return
 
     # Write back to docs.json
     with open(docs_json_path, "w") as f:
         json.dump(docs_config, f, indent=2)
         f.write("\n")  # Add trailing newline
+        
+    print(f"Updated {docs_json_path} - replaced placeholder with {len(navigation_pages)} entries")

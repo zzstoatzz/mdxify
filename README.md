@@ -30,6 +30,25 @@ mdxify mypackage.core mypackage.utils --output-dir docs/api
 - `--output-dir`: Output directory for generated MDX files (default: docs/api)
 - `--update-nav/--no-update-nav`: Update docs.json navigation (default: True)
 
+### Navigation Updates
+
+To use automatic navigation updates, add a placeholder in your `docs.json`:
+
+```json
+{
+  "navigation": [
+    {
+      "group": "API Reference",
+      "pages": [
+        {"$mdxify": "generated"}
+      ]
+    }
+  ]
+}
+```
+
+mdxify will replace `{"$mdxify": "generated"}` with the generated module structure.
+
 ## Features
 
 - **Fast AST-based parsing** - No module imports required
