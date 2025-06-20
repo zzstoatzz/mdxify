@@ -29,25 +29,36 @@ mdxify mypackage.core mypackage.utils --output-dir docs/python-sdk
 - `--root-module`: Root module to generate docs for (required when using --all)
 - `--output-dir`: Output directory for generated MDX files (default: docs/python-sdk)
 - `--update-nav/--no-update-nav`: Update docs.json navigation (default: True)
+- `--skip-empty-parents`: Skip parent modules that only contain boilerplate (default: False)
+- `--anchor-name`: Name of the navigation anchor to update (default: 'SDK Reference')
 
 ### Navigation Updates
 
-To use automatic navigation updates, add a placeholder in your `docs.json`:
+mdxify can automatically update your `docs.json` navigation in two ways:
+
+1. **First run**: Add a placeholder in your `docs.json`:
 
 ```json
 {
   "navigation": [
     {
-      "group": "API Reference",
-      "pages": [
-        {"$mdxify": "generated"}
+      "anchor": "SDK Reference",
+      "groups": [
+        {
+          "group": "Modules", 
+          "pages": [
+            {"$mdxify": "generated"}
+          ]
+        }
       ]
     }
   ]
 }
 ```
 
-mdxify will replace `{"$mdxify": "generated"}` with the generated module structure.
+2. **Subsequent runs**: mdxify will find and update the existing anchor directly - no placeholder needed!
+
+The navigation structure uses the `--anchor-name` parameter (default: "SDK Reference") to identify which section to update.
 
 ## Features
 

@@ -203,44 +203,103 @@ def find_mdxify_placeholder(obj: Any, path: list[str] | None = None) -> tuple[An
     return None
 
 
+def find_mdxify_anchor(docs_config: dict[str, Any], anchor_name: str) -> tuple[Any, list[str]] | None:
+    """Find an existing mdxify-managed anchor in the navigation.
+    
+    Returns the pages list and path to it, or None if not found.
+    """
+    navigation = docs_config.get("navigation", {})
+    
+    # Handle both navigation formats:
+    # 1. {"navigation": {"anchors": [...]}} (Mintlify format)
+    # 2. {"navigation": [...]} (direct array format)
+    if isinstance(navigation, dict):
+        anchors = navigation.get("anchors", [])
+    else:
+        anchors = navigation
+    
+    # Look through all navigation entries
+    for i, nav_item in enumerate(anchors):
+        if isinstance(nav_item, dict) and nav_item.get("anchor") == anchor_name:
+            # Found the anchor - for Mintlify format, pages are directly under the anchor
+            pages = nav_item.get("pages", [])
+            
+            # Build the correct path based on navigation format
+            if isinstance(navigation, dict):
+                # Mintlify format: navigation.anchors[i].pages
+                base_path = ["navigation", "anchors", i, "pages"]
+            else:
+                # Direct array format: navigation[i].pages  
+                base_path = ["navigation", i, "pages"]
+            
+            # Check for placeholder
+            for j, page in enumerate(pages):
+                if isinstance(page, dict) and page.get("$mdxify") == "generated":
+                    return (pages, j), base_path
+            
+            # Check if pages look like mdxify-generated content
+            # (paths that match our output pattern)
+            if pages and any(
+                isinstance(p, str) and ("python-sdk/" in p or p.startswith("docs/"))
+                for p in pages
+            ):
+                # This looks like our managed section
+                return (pages, None), base_path
+    
+    return None
+
+
 def update_docs_json(
     docs_json_path: Path, 
     generated_modules: list[str], 
     output_dir: Path,
     regenerate_all: bool = False,
-    skip_empty_parents: bool = False
-) -> None:
+    skip_empty_parents: bool = False,
+    anchor_name: str = "SDK Reference"
+) -> bool:
     """Update docs.json with generated module documentation.
     
-    Looks for {"$mdxify": "generated"} placeholder and replaces it with
-    the generated navigation structure.
+    First looks for an existing anchor with the given name to update.
+    If not found, looks for {"$mdxify": "generated"} placeholder.
+    
+    Returns True if successfully updated, False otherwise.
     """
     with open(docs_json_path, "r") as f:
         docs_config = json.load(f)
 
-    # Find the placeholder
-    result = find_mdxify_placeholder(docs_config)
+    # First, try to find an existing anchor
+    result = find_mdxify_anchor(docs_config, anchor_name)
     
     if not result:
-        print("""
-Warning: Could not find mdxify placeholder in docs.json
+        # No existing anchor, look for placeholder
+        result = find_mdxify_placeholder(docs_config)
+        
+        if not result:
+            print(f"""
+Warning: Could not find mdxify anchor '{anchor_name}' or placeholder in docs.json
 
-To use automatic navigation updates, add a placeholder in your docs.json:
+To use automatic navigation updates, either:
 
-{
+1. Add a placeholder in your docs.json:
+{{
   "navigation": [
-    {
-      "group": "API Reference", 
-      "pages": [
-        {"$mdxify": "generated"}
+    {{
+      "anchor": "{anchor_name}",
+      "groups": [
+        {{
+          "group": "Modules",
+          "pages": [
+            {{"$mdxify": "generated"}}
+          ]
+        }}
       ]
-    }
+    }}
   ]
-}
+}}
 
-Alternatively, use --no-update-nav and manually add the generated files to your navigation.
+2. Or use --no-update-nav and manually add the generated files to your navigation.
 """)
-        return
+            return False
 
     container_info, path = result
     
@@ -262,17 +321,21 @@ Alternatively, use --no-update-nav and manually add the generated files to your 
             public_modules, output_dir, docs_root, skip_empty_parents=skip_empty_parents
         )
 
-    # Replace the placeholder
+    # Replace the placeholder or update existing pages
     if isinstance(container_info, tuple):
-        # It's in a list
         container, index = container_info
-        # Replace the placeholder with the generated pages
-        container[index:index+1] = navigation_pages
+        if index is not None:
+            # Replace the placeholder with the generated pages
+            container[index:index+1] = navigation_pages
+        else:
+            # Update existing pages list (clear and replace)
+            container.clear()
+            container.extend(navigation_pages)
     else:
         # It's a direct dict reference - this shouldn't happen with current logic
         # but keeping for safety
         print("Warning: Unexpected placeholder location")
-        return
+        return False
 
     # Write back to docs.json
     with open(docs_json_path, "w") as f:
@@ -280,3 +343,4 @@ Alternatively, use --no-update-nav and manually add the generated files to your 
         f.write("\n")  # Add trailing newline
         
     print(f"Updated {docs_json_path} - replaced placeholder with {len(navigation_pages)} entries")
+    return True

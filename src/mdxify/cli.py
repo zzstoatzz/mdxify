@@ -53,6 +53,11 @@ def main():
         default=False,
         help="Skip parent modules that only contain boilerplate (default: False)",
     )
+    parser.add_argument(
+        "--anchor-name",
+        default="SDK Reference",
+        help="Name of the navigation anchor to update (default: 'SDK Reference')",
+    )
 
     args = parser.parse_args()
 
@@ -146,14 +151,18 @@ def main():
             print("\nUpdating docs.json navigation...")
             # Only do complete regeneration when --all is used
             regenerate_all = args.all or (not args.modules)
-            update_docs_json(
+            success = update_docs_json(
                 docs_json_path, 
                 generated_modules, 
                 args.output_dir,
                 regenerate_all=regenerate_all,
-                skip_empty_parents=args.skip_empty_parents
+                skip_empty_parents=args.skip_empty_parents,
+                anchor_name=args.anchor_name
             )
-            print("Navigation updated successfully")
+            if success:
+                print("Navigation updated successfully")
+            else:
+                print("Failed to update navigation")
         else:
             print(f"\nWarning: Could not find {docs_json_path}")
 
