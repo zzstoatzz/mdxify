@@ -26,7 +26,7 @@ def test_build_hierarchical_navigation_simple(tmp_path):
     # Find the blocks group
     blocks_group = None
     for item in result:
-        if isinstance(item, dict) and item.get("group") == "blocks":
+        if isinstance(item, dict) and item.get("group") == "mypackage.blocks":
             blocks_group = item
             break
     
@@ -52,10 +52,10 @@ def test_build_hierarchical_navigation_nested(tmp_path):
     # Both should be groups (dicts with 'group' key)
     assert all(isinstance(item, dict) and "group" in item for item in result)
     
-    # Check group names
+    # Check group names (now with fully qualified names)
     group_names = {item["group"] for item in result}
-    assert "utils" in group_names
-    assert "models" in group_names
+    assert "mypackage.utils" in group_names
+    assert "mypackage.models" in group_names
 
 
 def test_find_mdxify_placeholder():
@@ -161,3 +161,167 @@ def test_update_docs_json_without_placeholder(tmp_path, capsys):
     captured = capsys.readouterr()
     assert "Could not find mdxify placeholder" in captured.out
     assert '{"$mdxify": "generated"}' in captured.out
+
+
+def test_navigation_uses_output_dir_prefix(tmp_path):
+    """Test that navigation entries use the correct output directory prefix."""
+    # The navigation prefix is calculated in update_docs_json, not build_hierarchical_navigation
+    # build_hierarchical_navigation returns just the filenames without path prefix
+    modules = [
+        "mypackage.core",
+        "mypackage.utils.helpers",
+        "mypackage.utils.validators",
+    ]
+    
+    output_dir = tmp_path / "python-sdk"
+    result = build_hierarchical_navigation(modules, output_dir, skip_empty_parents=False)
+    
+    # Check top-level module (without prefix)
+    assert any(item == "mypackage-core" for item in result)
+    
+    # Check nested modules in group
+    utils_group = None
+    for item in result:
+        if isinstance(item, dict) and item.get("group") == "mypackage.utils":
+            utils_group = item
+            break
+    
+    assert utils_group is not None
+    assert "mypackage-utils-helpers" in utils_group["pages"]
+    assert "mypackage-utils-validators" in utils_group["pages"]
+
+
+def test_update_docs_json_with_custom_output_path(tmp_path):
+    """Test that update_docs_json correctly adds path prefix for custom output directories."""
+    # Create a docs.json with placeholder
+    docs_json = tmp_path / "docs.json"
+    docs_config = {
+        "navigation": [{"anchor": "SDK Reference", "pages": [{"$mdxify": "generated"}]}]
+    }
+    
+    with open(docs_json, "w") as f:
+        json.dump(docs_config, f)
+    
+    # Create output dir as python-sdk instead of api
+    output_dir = tmp_path / "python-sdk"
+    output_dir.mkdir()
+    
+    # Create some dummy MDX files
+    (output_dir / "mypackage-core.mdx").write_text("# Core")
+    (output_dir / "mypackage-utils-helpers.mdx").write_text("# Helpers")
+    
+    # Update docs.json
+    generated_modules = ["mypackage.core", "mypackage.utils.helpers"]
+    update_docs_json(docs_json, generated_modules, output_dir, regenerate_all=True)
+    
+    # Check the result
+    with open(docs_json) as f:
+        updated_config = json.load(f)
+    
+    pages = updated_config["navigation"][0]["pages"]
+    # Should have entries with python-sdk prefix
+    assert any("python-sdk/mypackage-core" in str(page) for page in pages)
+    
+    # Find the utils group and check its pages have the prefix too
+    utils_group = None
+    for item in pages:
+        if isinstance(item, dict) and item.get("group") == "mypackage.utils":
+            utils_group = item
+            break
+    
+    assert utils_group is not None
+    assert any("python-sdk/mypackage-utils-helpers" in page for page in utils_group["pages"])
+
+
+def test_navigation_path_calculation(tmp_path):
+    """Test that navigation paths are calculated correctly relative to docs root."""
+    # Test when output is under docs/
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    output_dir = docs_dir / "python-sdk"
+    output_dir.mkdir()
+    
+    # Create dummy MDX files
+    (output_dir / "mypackage-core.mdx").write_text("# Core")
+    
+    # Create docs.json
+    docs_json = docs_dir / "docs.json"
+    docs_config = {
+        "navigation": [{"anchor": "SDK Reference", "pages": [{"$mdxify": "generated"}]}]
+    }
+    
+    with open(docs_json, "w") as f:
+        json.dump(docs_config, f)
+    
+    # Update navigation
+    update_docs_json(docs_json, ["mypackage.core"], output_dir, regenerate_all=True)
+    
+    # Check result
+    with open(docs_json) as f:
+        result = json.load(f)
+    
+    pages = result["navigation"][0]["pages"]
+    print(f"Navigation pages (under docs): {pages}")
+    assert "python-sdk/mypackage-core" in pages
+    
+    # Test when output is NOT under docs/
+    external_dir = tmp_path / "external-docs"
+    external_dir.mkdir()
+    (external_dir / "mypackage-api.mdx").write_text("# API")
+    
+    # Reset docs.json
+    docs_config["navigation"][0]["pages"] = [{"$mdxify": "generated"}]
+    with open(docs_json, "w") as f:
+        json.dump(docs_config, f)
+    
+    # Update with external dir
+    update_docs_json(docs_json, ["mypackage.api"], external_dir, regenerate_all=True)
+    
+    with open(docs_json) as f:
+        result = json.load(f)
+    
+    # Should just have filename without path prefix when outside docs/
+    pages = result["navigation"][0]["pages"]
+    assert "mypackage-api" in pages
+    assert "external-docs/mypackage-api" not in str(pages)
+
+
+def test_hierarchical_navigation_with_fully_qualified_names(tmp_path):
+    """Test that hierarchical navigation uses fully qualified module names for groups."""
+    modules = [
+        "fastmcp.cli",
+        "fastmcp.cli.run",
+        "fastmcp.server.auth",
+        "fastmcp.server.auth.providers.bearer",
+    ]
+    
+    output_dir = tmp_path / "api"
+    result = build_hierarchical_navigation(modules, output_dir, skip_empty_parents=False)
+    
+    # Find the CLI group
+    cli_group = None
+    for item in result:
+        if isinstance(item, dict) and "fastmcp.cli" in item.get("group", ""):
+            cli_group = item
+            break
+    
+    assert cli_group is not None
+    assert cli_group["group"] == "fastmcp.cli"  # Should be fully qualified
+    
+    # Find the server.auth group
+    server_group = None
+    for item in result:
+        if isinstance(item, dict) and "fastmcp.server" in item.get("group", ""):
+            server_group = item
+            break
+    
+    assert server_group is not None
+    # Check for nested auth group
+    auth_group = None
+    for page in server_group["pages"]:
+        if isinstance(page, dict) and "fastmcp.server.auth" in page.get("group", ""):
+            auth_group = page
+            break
+    
+    assert auth_group is not None
+    assert auth_group["group"] == "fastmcp.server.auth"  # Should be fully qualified

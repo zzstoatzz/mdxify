@@ -112,7 +112,9 @@ def build_hierarchical_navigation(
             
             if submodules:
                 # This has submodules - create a group
-                group_entry = {"group": name, "pages": []}
+                # Use fully qualified module name for the group
+                full_module_name = ".".join(current_parts)
+                group_entry = {"group": full_module_name, "pages": []}
                 
                 # If this module itself exists (has a path), add it as __init__
                 if has_path:

@@ -13,13 +13,13 @@ pip install mdxify
 Generate documentation for all modules in a package:
 
 ```bash
-mdxify --all --root-module mypackage --output-dir docs/api
+mdxify --all --root-module mypackage --output-dir docs/python-sdk
 ```
 
 Generate documentation for specific modules:
 
 ```bash
-mdxify mypackage.core mypackage.utils --output-dir docs/api
+mdxify mypackage.core mypackage.utils --output-dir docs/python-sdk
 ```
 
 ### Options
@@ -27,7 +27,7 @@ mdxify mypackage.core mypackage.utils --output-dir docs/api
 - `modules`: Specific modules to document
 - `--all`: Generate documentation for all modules under the root module
 - `--root-module`: Root module to generate docs for (required when using --all)
-- `--output-dir`: Output directory for generated MDX files (default: docs/api)
+- `--output-dir`: Output directory for generated MDX files (default: docs/python-sdk)
 - `--update-nav/--no-update-nav`: Update docs.json navigation (default: True)
 
 ### Navigation Updates

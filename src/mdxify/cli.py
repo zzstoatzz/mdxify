@@ -28,8 +28,8 @@ def main():
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default="docs/api",
-        help="Output directory for generated MDX files (default: docs/api)",
+        default="docs/python-sdk",
+        help="Output directory for generated MDX files (default: docs/python-sdk)",
     )
     parser.add_argument(
         "--update-nav",

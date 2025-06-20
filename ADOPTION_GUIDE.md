@@ -21,9 +21,9 @@ mdxify mypackage.core mypackage.api mypackage.models
 
 **Change output directory:**
 ```bash
-mdxify --all --root-module mypackage --output-dir docs/api
+mdxify --all --root-module mypackage --output-dir docs/python-sdk
 ```
-(Default is `docs/api`)
+(Default is `docs/python-sdk`)
 
 **Skip navigation file updates:**
 ```bash
@@ -40,7 +40,7 @@ mdxify --all --root-module mypackage --no-update-nav
 ## Output
 
 For a module like `mypackage.core.auth`, you get:
-- File: `docs/api/mypackage-core-auth.mdx`
+- File: `docs/python-sdk/mypackage-core-auth.mdx`
 - Contains: All public classes, functions, methods with their signatures and docstrings
 - Formatted: MDX with proper escaping for type annotations
 
@@ -98,13 +98,13 @@ jobs:
         uses: astral-sh/setup-uv@v5
       
       - name: Generate API documentation
-        run: uvx mdxify --all --root-module mypackage --output-dir docs/api
+        run: uvx mdxify --all --root-module mypackage --output-dir docs/python-sdk
       
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: 'docs: update API reference [skip ci]'
-          file_pattern: 'docs/api/**/*.mdx'
+          file_pattern: 'docs/python-sdk/**/*.mdx'
 ```
 
 ## Example Output Structure
@@ -125,7 +125,7 @@ mypackage/
 
 You get:
 ```
-docs/api/
+docs/python-sdk/
 ├── mypackage-__init__.mdx
 ├── mypackage-core.mdx
 ├── mypackage-utils-__init__.mdx
