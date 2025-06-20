@@ -58,27 +58,20 @@ def build_hierarchical_navigation(
     # Group modules by their hierarchy
     module_tree = {}
     
-    # First, collect all single-part modules (package roots)
-    root_modules = []
-    
     for module_name in sorted(generated_modules):
         parts = module_name.split(".")
         
-        if len(parts) == 1:
-            # This is a root module (e.g., 'fastmcp')
-            root_modules.append(module_name)
-        else:
-            # Navigate/create the tree structure for multi-part modules
-            current = module_tree
-            for i, part in enumerate(parts[1:], 1):
-                if i == len(parts) - 1:
-                    # This is the leaf module
-                    current[part] = {"_is_leaf": True, "_full_name": module_name}
-                else:
-                    # This is an intermediate module
-                    if part not in current:
-                        current[part] = {}
-                    current = current[part]
+        # Navigate/create the tree structure
+        current = module_tree
+        for i, part in enumerate(parts):
+            if i == len(parts) - 1:
+                # This is the leaf module
+                current[part] = {"_is_leaf": True, "_full_name": module_name}
+            else:
+                # This is an intermediate module
+                if part not in current:
+                    current[part] = {}
+                current = current[part]
     
     def tree_to_nav(tree: dict, parent_parts: list[str] | None = None) -> list[Any]:
         """Convert the tree structure to navigation format."""
@@ -88,6 +81,8 @@ def build_hierarchical_navigation(
         result = []
         
         for name, subtree in sorted(tree.items()):
+            current_parts = parent_parts + [name]
+            
             if subtree.get("_is_leaf"):
                 # This is a leaf module - add the path to the file
                 filename = subtree["_full_name"].replace(".", "-")
@@ -97,52 +92,51 @@ def build_hierarchical_navigation(
                     nav_path = filename
                 result.append(nav_path)
             else:
-                # This has submodules - create a group
-                group_entry = {"group": name, "pages": []}
-                
-                # Check if this module itself has documentation (as __init__)
-                current_parts = parent_parts + [name]
-                module_name = ".".join(current_parts)
-                init_filename = f"{module_name.replace('.', '-')}-__init__"
-                init_file = output_dir / f"{init_filename}.mdx"
-                
-                if init_file.exists():
-                    if not skip_empty_parents or not is_module_empty(init_file):
+                # This has submodules - could be a package root or intermediate module
+                # Check if this is a root-level module with submodules
+                if len(current_parts) == 1:
+                    # This is a root package (e.g., 'fastmcp') - add it directly if it exists
+                    root_filename = name
+                    root_file = output_dir / f"{root_filename}.mdx"
+                    if root_file.exists():
                         if nav_prefix:
-                            nav_path = str(nav_prefix / init_filename).replace("\\", "/")
+                            nav_path = str(nav_prefix / root_filename).replace("\\", "/")
                         else:
-                            nav_path = init_filename
-                        group_entry["pages"].append(nav_path)
-                
-                # Add all submodules
-                sub_pages = tree_to_nav(subtree, current_parts)
-                group_entry["pages"].extend(sub_pages)
-                
-                # Only add the group if it has content
-                if group_entry["pages"]:
-                    result.append(group_entry)
+                            nav_path = root_filename
+                        result.append(nav_path)
+                    
+                    # Add all its submodules
+                    sub_pages = tree_to_nav(subtree, current_parts)
+                    result.extend(sub_pages)
+                else:
+                    # This is an intermediate module - create a group
+                    group_entry = {"group": name, "pages": []}
+                    
+                    # Check if this module itself has documentation (as __init__)
+                    module_name = ".".join(current_parts)
+                    init_filename = f"{module_name.replace('.', '-')}-__init__"
+                    init_file = output_dir / f"{init_filename}.mdx"
+                    
+                    if init_file.exists():
+                        if not skip_empty_parents or not is_module_empty(init_file):
+                            if nav_prefix:
+                                nav_path = str(nav_prefix / init_filename).replace("\\", "/")
+                            else:
+                                nav_path = init_filename
+                            group_entry["pages"].append(nav_path)
+                    
+                    # Add all submodules
+                    sub_pages = tree_to_nav(subtree, current_parts)
+                    group_entry["pages"].extend(sub_pages)
+                    
+                    # Only add the group if it has content
+                    if group_entry["pages"]:
+                        result.append(group_entry)
         
         return result
     
-    # Build the final navigation
-    result = []
-    
-    # Add root modules first
-    for root_module in root_modules:
-        filename = root_module.replace(".", "-")
-        if nav_prefix:
-            nav_path = str(nav_prefix / filename).replace("\\", "/")
-        else:
-            nav_path = filename
-        result.append(nav_path)
-    
-    # Then add the hierarchical modules
-    if generated_modules and module_tree:
-        root_package = next((m.split(".")[0] for m in generated_modules if "." in m), None)
-        if root_package:
-            result.extend(tree_to_nav(module_tree, [root_package]))
-    
-    return result
+    # Build the final navigation from the tree
+    return tree_to_nav(module_tree)
 
 
 def find_mdxify_placeholder(obj: Any, path: list[str] | None = None) -> tuple[Any, list[str]] | None:
