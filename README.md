@@ -22,6 +22,12 @@ Generate documentation for specific modules:
 mdxify mypackage.core mypackage.utils --output-dir docs/python-sdk
 ```
 
+Exclude internal modules from documentation:
+
+```bash
+mdxify --all --root-module mypackage --exclude mypackage.internal --exclude mypackage.tests
+```
+
 ### Options
 
 - `modules`: Specific modules to document
@@ -31,6 +37,7 @@ mdxify mypackage.core mypackage.utils --output-dir docs/python-sdk
 - `--update-nav/--no-update-nav`: Update docs.json navigation (default: True)
 - `--skip-empty-parents`: Skip parent modules that only contain boilerplate (default: False)
 - `--anchor-name`: Name of the navigation anchor to update (default: 'SDK Reference')
+- `--exclude`: Module to exclude from documentation (can be specified multiple times). Excludes the module and all its submodules.
 
 ### Navigation Updates
 

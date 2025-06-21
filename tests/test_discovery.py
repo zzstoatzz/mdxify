@@ -13,7 +13,12 @@ def test_should_include_module_excludes_private():
 
 
 def test_should_include_module_excludes_known_patterns():
-    """Test that known internal patterns are excluded."""
-    assert should_include_module("mypackage.testing.fixtures") is False
-    assert should_include_module("mypackage.tests.test_something") is False
+    """Test that modules are included by default unless they have underscore prefix."""
+    # These should now be included since we don't exclude based on keywords
+    assert should_include_module("mypackage.testing.fixtures") is True
+    assert should_include_module("mypackage.tests.test_something") is True
     assert should_include_module("mypackage.blocks.core") is True
+    
+    # Only underscore prefixed modules should be excluded
+    assert should_include_module("mypackage._testing") is False
+    assert should_include_module("mypackage.tests._internal") is False

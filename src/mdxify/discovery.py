@@ -44,10 +44,4 @@ def should_include_module(module_name: str) -> bool:
         if part.startswith("_"):
             return False
 
-    # Common test/internal patterns to exclude
-    excluded_keywords = ["test", "tests", "testing", "_test", "_tests"]
-    for part in parts:
-        if any(keyword in part.lower() for keyword in excluded_keywords):
-            return False
-
     return True
