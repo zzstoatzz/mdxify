@@ -156,7 +156,7 @@ def test_exclude_removes_existing_files(tmp_path):
          patch("mdxify.cli.get_module_source_file") as mock_source, \
          patch("mdxify.cli.should_include_module") as mock_should_include, \
          patch("mdxify.cli.parse_module_fast") as mock_parse, \
-         patch("mdxify.cli.generate_mdx") as mock_generate, \
+         patch("mdxify.cli.generate_mdx"), \
          patch.object(sys, "argv", [
              "mdxify", "--all", "--root-module", "mypackage",
              "--output-dir", str(output_dir),
