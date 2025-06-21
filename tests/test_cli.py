@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from mdxify.cli import main
+from mdxify.cli import main, remove_excluded_files
 
 
 def test_default_output_dir_is_python_sdk():
@@ -187,3 +187,28 @@ def test_exclude_removes_existing_files(tmp_path):
         
         # Check that non-excluded files still exist
         assert (output_dir / "mypackage-core.mdx").exists()
+
+
+def test_remove_excluded_files_helper(tmp_path):
+    """Test the remove_excluded_files helper function."""
+    output_dir = tmp_path / "docs"
+    output_dir.mkdir()
+    
+    # Create some MDX files
+    (output_dir / "mypackage-core.mdx").write_text("# Core")
+    (output_dir / "mypackage-internal-__init__.mdx").write_text("# Internal")
+    (output_dir / "mypackage-internal-helpers.mdx").write_text("# Helpers")
+    (output_dir / "mypackage-utils.mdx").write_text("# Utils")
+    
+    # Test removing files
+    removed = remove_excluded_files(output_dir, ["mypackage.internal"])
+    
+    assert removed == 2
+    assert not (output_dir / "mypackage-internal-__init__.mdx").exists()
+    assert not (output_dir / "mypackage-internal-helpers.mdx").exists()
+    assert (output_dir / "mypackage-core.mdx").exists()
+    assert (output_dir / "mypackage-utils.mdx").exists()
+    
+    # Test with non-existent directory
+    removed = remove_excluded_files(tmp_path / "nonexistent", ["anything"])
+    assert removed == 0

@@ -11,6 +11,33 @@ from .navigation import update_docs_json
 from .parser import parse_module_fast
 
 
+def remove_excluded_files(output_dir: Path, exclude_patterns: list[str]) -> int:
+    """Remove existing MDX files for excluded modules.
+    
+    Returns the number of files removed.
+    """
+    if not output_dir.exists():
+        return 0
+        
+    removed_count = 0
+    for mdx_file in output_dir.glob("*.mdx"):
+        # Convert filename back to module name
+        stem = mdx_file.stem
+        if stem.endswith("-__init__"):
+            module_name = stem[:-9].replace("-", ".")
+        else:
+            module_name = stem.replace("-", ".")
+        
+        # Check if this module should be excluded
+        for exclude_pattern in exclude_patterns:
+            if module_name == exclude_pattern or module_name.startswith(exclude_pattern + "."):
+                mdx_file.unlink()
+                removed_count += 1
+                break
+                
+    return removed_count
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Generate API reference documentation for Python modules"
@@ -95,6 +122,8 @@ def main():
     if args.exclude:
         excluded_count = 0
         filtered_modules = []
+        matched_patterns = set()
+        
         for module in modules_to_process:
             # Check if this module or any parent module is excluded
             should_exclude = False
@@ -102,34 +131,24 @@ def main():
                 if module == exclude_pattern or module.startswith(exclude_pattern + "."):
                     should_exclude = True
                     excluded_count += 1
+                    matched_patterns.add(exclude_pattern)
                     break
             if not should_exclude:
                 filtered_modules.append(module)
+        
+        # Warn about patterns that didn't match anything
+        unmatched_patterns = set(args.exclude) - matched_patterns
+        for pattern in unmatched_patterns:
+            print(f"Warning: --exclude pattern '{pattern}' did not match any modules")
         
         if excluded_count > 0:
             print(f"Excluding {excluded_count} modules based on --exclude patterns")
         modules_to_process = filtered_modules
         
         # Remove existing MDX files for excluded modules (declarative behavior)
-        if args.output_dir.exists():
-            removed_count = 0
-            for mdx_file in args.output_dir.glob("*.mdx"):
-                # Convert filename back to module name
-                stem = mdx_file.stem
-                if stem.endswith("-__init__"):
-                    module_name = stem[:-9].replace("-", ".")
-                else:
-                    module_name = stem.replace("-", ".")
-                
-                # Check if this module should be excluded
-                for exclude_pattern in args.exclude:
-                    if module_name == exclude_pattern or module_name.startswith(exclude_pattern + "."):
-                        mdx_file.unlink()
-                        removed_count += 1
-                        break
-            
-            if removed_count > 0:
-                print(f"Removed {removed_count} existing MDX files for excluded modules")
+        removed_count = remove_excluded_files(args.output_dir, args.exclude)
+        if removed_count > 0:
+            print(f"Removed {removed_count} existing MDX files for excluded modules")
 
     # Generate documentation
     generated_modules = []

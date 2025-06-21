@@ -37,7 +37,7 @@ mdxify --all --root-module mypackage --exclude mypackage.internal --exclude mypa
 - `--update-nav/--no-update-nav`: Update docs.json navigation (default: True)
 - `--skip-empty-parents`: Skip parent modules that only contain boilerplate (default: False)
 - `--anchor-name`: Name of the navigation anchor to update (default: 'SDK Reference')
-- `--exclude`: Module to exclude from documentation (can be specified multiple times). Excludes the module and all its submodules
+- `--exclude`: Module to exclude from documentation (can be specified multiple times). Excludes the module and all its submodules.
 
 ### Navigation Updates
 
