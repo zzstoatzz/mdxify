@@ -58,6 +58,11 @@ def main():
         default="SDK Reference",
         help="Name of the navigation anchor to update (default: 'SDK Reference')",
     )
+    parser.add_argument(
+        "--exclude",
+        action="append",
+        help="Module to exclude from documentation (can be specified multiple times). Excludes the module and all its submodules.",
+    )
 
     args = parser.parse_args()
 
@@ -85,6 +90,46 @@ def main():
 
     # Remove duplicates
     modules_to_process = sorted(set(modules_to_process))
+    
+    # Filter out excluded modules
+    if args.exclude:
+        excluded_count = 0
+        filtered_modules = []
+        for module in modules_to_process:
+            # Check if this module or any parent module is excluded
+            should_exclude = False
+            for exclude_pattern in args.exclude:
+                if module == exclude_pattern or module.startswith(exclude_pattern + "."):
+                    should_exclude = True
+                    excluded_count += 1
+                    break
+            if not should_exclude:
+                filtered_modules.append(module)
+        
+        if excluded_count > 0:
+            print(f"Excluding {excluded_count} modules based on --exclude patterns")
+        modules_to_process = filtered_modules
+        
+        # Remove existing MDX files for excluded modules (declarative behavior)
+        if args.output_dir.exists():
+            removed_count = 0
+            for mdx_file in args.output_dir.glob("*.mdx"):
+                # Convert filename back to module name
+                stem = mdx_file.stem
+                if stem.endswith("-__init__"):
+                    module_name = stem[:-9].replace("-", ".")
+                else:
+                    module_name = stem.replace("-", ".")
+                
+                # Check if this module should be excluded
+                for exclude_pattern in args.exclude:
+                    if module_name == exclude_pattern or module_name.startswith(exclude_pattern + "."):
+                        mdx_file.unlink()
+                        removed_count += 1
+                        break
+            
+            if removed_count > 0:
+                print(f"Removed {removed_count} existing MDX files for excluded modules")
 
     # Generate documentation
     generated_modules = []

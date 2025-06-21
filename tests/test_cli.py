@@ -86,3 +86,104 @@ def test_cli_processes_specified_modules():
         output_file = call_args[0][1]
         assert "python-sdk" in str(output_file)
         assert output_file.name == "mypackage-core.mdx"
+
+
+def test_exclude_modules():
+    """Test that --exclude properly excludes modules and their submodules."""
+    with patch("mdxify.cli.find_all_modules") as mock_find, \
+         patch("mdxify.cli.get_module_source_file") as mock_source, \
+         patch("mdxify.cli.should_include_module") as mock_should_include, \
+         patch("mdxify.cli.parse_module_fast") as mock_parse, \
+         patch("mdxify.cli.generate_mdx") as mock_generate, \
+         patch.object(sys, "argv", [
+             "mdxify", "--all", "--root-module", "mypackage",
+             "--no-update-nav",
+             "--exclude", "mypackage.internal",
+             "--exclude", "mypackage.utils.helpers"
+         ]):
+        
+        # Setup mocks
+        mock_find.return_value = [
+            "mypackage",
+            "mypackage.core",
+            "mypackage.utils",
+            "mypackage.utils.helpers",
+            "mypackage.internal",
+            "mypackage.internal.stuff",
+        ]
+        mock_source.side_effect = lambda m: Path(f"{m.replace('.', '/')}.py")
+        mock_should_include.return_value = True
+        mock_parse.side_effect = lambda name, path: {
+            "name": name,
+            "docstring": f"Module {name}",
+            "functions": [],
+            "classes": []
+        }
+        
+        # Run
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        
+        assert exc_info.value.code == 0  # type: ignore
+        
+        # Check that only non-excluded modules were processed
+        processed_modules = [call[0][0]["name"] for call in mock_generate.call_args_list]
+        assert "mypackage" in processed_modules
+        assert "mypackage.core" in processed_modules
+        assert "mypackage.utils" in processed_modules
+        
+        # Check that excluded modules were NOT processed
+        assert "mypackage.internal" not in processed_modules
+        assert "mypackage.internal.stuff" not in processed_modules
+        assert "mypackage.utils.helpers" not in processed_modules
+        
+        # Should have processed 3 modules total
+        assert len(processed_modules) == 3
+
+
+def test_exclude_removes_existing_files(tmp_path):
+    """Test that --exclude removes existing MDX files (declarative behavior)."""
+    # Create output directory with existing files
+    output_dir = tmp_path / "docs"
+    output_dir.mkdir()
+    
+    # Create some existing MDX files
+    (output_dir / "mypackage-core.mdx").write_text("# Core")
+    (output_dir / "mypackage-internal-__init__.mdx").write_text("# Internal")
+    (output_dir / "mypackage-internal-stuff.mdx").write_text("# Stuff")
+    
+    with patch("mdxify.cli.find_all_modules") as mock_find, \
+         patch("mdxify.cli.get_module_source_file") as mock_source, \
+         patch("mdxify.cli.should_include_module") as mock_should_include, \
+         patch("mdxify.cli.parse_module_fast") as mock_parse, \
+         patch("mdxify.cli.generate_mdx") as mock_generate, \
+         patch.object(sys, "argv", [
+             "mdxify", "--all", "--root-module", "mypackage",
+             "--output-dir", str(output_dir),
+             "--no-update-nav",
+             "--exclude", "mypackage.internal"
+         ]):
+        
+        # Setup mocks - only core module remains after exclusion
+        mock_find.return_value = ["mypackage", "mypackage.core"]
+        mock_source.side_effect = lambda m: Path(f"{m.replace('.', '/')}.py")
+        mock_should_include.return_value = True
+        mock_parse.side_effect = lambda name, path: {
+            "name": name,
+            "docstring": f"Module {name}",
+            "functions": [],
+            "classes": []
+        }
+        
+        # Run
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        
+        assert exc_info.value.code == 0  # type: ignore
+        
+        # Check that excluded files were removed
+        assert not (output_dir / "mypackage-internal-__init__.mdx").exists()
+        assert not (output_dir / "mypackage-internal-stuff.mdx").exists()
+        
+        # Check that non-excluded files still exist
+        assert (output_dir / "mypackage-core.mdx").exists()
