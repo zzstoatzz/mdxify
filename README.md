@@ -25,7 +25,7 @@ mdxify mypackage.core mypackage.utils --output-dir docs/python-sdk
 Exclude internal modules from documentation:
 
 ```bash
-mdxify --all --root-module mypackage --exclude mypackage.internal --exclude mypackage.testing
+mdxify --all --root-module mypackage --exclude mypackage.internal --exclude mypackage.experimental
 ```
 
 ### Options
