@@ -419,3 +419,80 @@ def test_hierarchical_navigation_with_fully_qualified_names(tmp_path):
     
     assert providers_group is not None
     assert providers_group["group"] == "providers"  # Deeply nested should also not be fully qualified
+
+
+def test_update_docs_json_with_tabs_structure(tmp_path):
+    """Test updating docs.json when anchor is nested within tabs."""
+    # Create a docs.json with tabs structure like FastMCP uses
+    docs_json = tmp_path / "docs.json"
+    docs_config = {
+        "name": "FastMCP",
+        "navigation": {
+            "tabs": [
+                {
+                    "tab": "Documentation",
+                    "anchors": [
+                        {
+                            "anchor": "Documentation",
+                            "pages": ["getting-started/welcome"]
+                        },
+                        {
+                            "anchor": "Community",
+                            "pages": ["community/showcase"]
+                        }
+                    ]
+                },
+                {
+                    "tab": "SDK Reference",
+                    "anchors": [
+                        {
+                            "anchor": "Python SDK",
+                            "icon": "python",
+                            "pages": [
+                                {"$mdxify": "generated"}
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+    
+    with open(docs_json, "w") as f:
+        json.dump(docs_config, f)
+    
+    # Create some MDX files
+    output_dir = tmp_path / "python-sdk"
+    output_dir.mkdir()
+    (output_dir / "fastmcp-client.mdx").write_text("# Client")
+    (output_dir / "fastmcp-server.mdx").write_text("# Server")
+    
+    # Update docs.json
+    generated_modules = ["fastmcp.client", "fastmcp.server"]
+    result = update_docs_json(
+        docs_json, 
+        generated_modules, 
+        output_dir, 
+        regenerate_all=True,
+        anchor_name="Python SDK"
+    )
+    
+    # Should succeed
+    assert result is True
+    
+    # Check the result
+    with open(docs_json) as f:
+        updated_config = json.load(f)
+    
+    # Navigate to the SDK pages
+    sdk_tab = updated_config["navigation"]["tabs"][1]
+    assert sdk_tab["tab"] == "SDK Reference"
+    
+    python_sdk_anchor = sdk_tab["anchors"][0]
+    assert python_sdk_anchor["anchor"] == "Python SDK"
+    assert python_sdk_anchor["icon"] == "python"  # Should preserve icon
+    
+    pages = python_sdk_anchor["pages"]
+    assert len(pages) == 2
+    assert "python-sdk/fastmcp-client" in pages
+    assert "python-sdk/fastmcp-server" in pages
