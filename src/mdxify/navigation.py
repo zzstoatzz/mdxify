@@ -208,45 +208,43 @@ def find_mdxify_anchor(docs_config: dict[str, Any], anchor_name: str) -> tuple[A
     
     Returns the pages list and path to it, or None if not found.
     """
+    
+    def search_anchor_in_structure(obj: Any, current_path: list[str], target_anchor: str) -> tuple[Any, list[str]] | None:
+        """Recursively search for an anchor with the given name."""
+        if isinstance(obj, dict):
+            # Check if this is an anchor with the target name
+            if obj.get("anchor") == target_anchor:
+                pages = obj.get("pages", [])
+                pages_path = current_path + ["pages"]
+                
+                # Check for placeholder
+                for j, page in enumerate(pages):
+                    if isinstance(page, dict) and page.get("$mdxify") == "generated":
+                        return (pages, j), pages_path
+                
+                # If we found the anchor but no placeholder, return it anyway
+                # The caller will decide whether to update based on the content
+                if pages:
+                    return (pages, None), pages_path
+            
+            # Recursively search in all dict values
+            for key, value in obj.items():
+                result = search_anchor_in_structure(value, current_path + [key], target_anchor)
+                if result:
+                    return result
+                    
+        elif isinstance(obj, list):
+            # Search through list items
+            for i, item in enumerate(obj):
+                result = search_anchor_in_structure(item, current_path + [i], target_anchor)
+                if result:
+                    return result
+        
+        return None
+    
+    # Start searching from the navigation root
     navigation = docs_config.get("navigation", {})
-    
-    # Handle both navigation formats:
-    # 1. {"navigation": {"anchors": [...]}} (Mintlify format)
-    # 2. {"navigation": [...]} (direct array format)
-    if isinstance(navigation, dict):
-        anchors = navigation.get("anchors", [])
-    else:
-        anchors = navigation
-    
-    # Look through all navigation entries
-    for i, nav_item in enumerate(anchors):
-        if isinstance(nav_item, dict) and nav_item.get("anchor") == anchor_name:
-            # Found the anchor - for Mintlify format, pages are directly under the anchor
-            pages = nav_item.get("pages", [])
-            
-            # Build the correct path based on navigation format
-            if isinstance(navigation, dict):
-                # Mintlify format: navigation.anchors[i].pages
-                base_path = ["navigation", "anchors", i, "pages"]
-            else:
-                # Direct array format: navigation[i].pages  
-                base_path = ["navigation", i, "pages"]
-            
-            # Check for placeholder
-            for j, page in enumerate(pages):
-                if isinstance(page, dict) and page.get("$mdxify") == "generated":
-                    return (pages, j), base_path
-            
-            # Check if pages look like mdxify-generated content
-            # (paths that match our output pattern)
-            if pages and any(
-                isinstance(p, str) and ("python-sdk/" in p or p.startswith("docs/"))
-                for p in pages
-            ):
-                # This looks like our managed section
-                return (pages, None), base_path
-    
-    return None
+    return search_anchor_in_structure(navigation, ["navigation"], anchor_name)
 
 
 def update_docs_json(
