@@ -76,12 +76,12 @@ def test_add_source_link_to_header():
         "### `function_name`",
         "https://github.com/owner/repo/blob/main/module.py#L42",
     )
-    # The link should be on a new line with default text
-    expected = '### `function_name`\n<sub>[view on GitHub ↗](https://github.com/owner/repo/blob/main/module.py#L42)</sub>'
+    # The link should be inline with GitHub icon
+    expected = '### `function_name` <sup><a href="https://github.com/owner/repo/blob/main/module.py#L42"><Icon icon="github" size="14" /></a></sup>'
     assert result == expected
     
-    # Test that link is on new line
-    assert "### `function_name`\n<sub>" in result
+    # Test that link is inline
+    assert '<sup><a href="' in result
     
     # Test with no link
     result = add_source_link_to_header("### `function_name`", None)
@@ -89,30 +89,14 @@ def test_add_source_link_to_header():
 
 
 def test_add_source_link_with_custom_text(monkeypatch):
-    """Test source link with custom environment variable."""
-    # Test with custom text
+    """Test source link with icon (env var no longer used)."""
+    # The environment variable is no longer used since we use icon
+    # But let's test that it still works without errors
     monkeypatch.setenv("MDXIFY_SOURCE_LINK_TEXT", "[src]")
     result = add_source_link_to_header(
         "### `function_name`",
         "https://github.com/owner/repo/blob/main/module.py#L42",
     )
-    expected = '### `function_name`\n<sub>[[src]](https://github.com/owner/repo/blob/main/module.py#L42)</sub>'
-    assert result == expected
-    
-    # Test with emoji
-    monkeypatch.setenv("MDXIFY_SOURCE_LINK_TEXT", "🔗")
-    result = add_source_link_to_header(
-        "### `function_name`",
-        "https://github.com/owner/repo/blob/main/module.py#L42",
-    )
-    expected = '### `function_name`\n<sub>[🔗](https://github.com/owner/repo/blob/main/module.py#L42)</sub>'
-    assert result == expected
-    
-    # Test with custom unicode
-    monkeypatch.setenv("MDXIFY_SOURCE_LINK_TEXT", "⧉")
-    result = add_source_link_to_header(
-        "### `function_name`",
-        "https://github.com/owner/repo/blob/main/module.py#L42",
-    )
-    expected = '### `function_name`\n<sub>[⧉](https://github.com/owner/repo/blob/main/module.py#L42)</sub>'
+    # Should still produce the icon, not the custom text
+    expected = '### `function_name` <sup><a href="https://github.com/owner/repo/blob/main/module.py#L42"><Icon icon="github" size="14" /></a></sup>'
     assert result == expected
