@@ -140,9 +140,9 @@ def add_source_link_to_header(
         return header
     
     # Create a subtle, elegant source link
-    # Using a simple Unicode arrow that won't break MDX parsing
-    # Styled to be unobtrusive but functional
-    icon_link = f' <a href="{source_link}" target="_blank" style="text-decoration: none; opacity: 0.5; font-size: 0.875em; margin-left: 0.25rem;">↗</a>'
+    # Using a superscript with a simple Unicode arrow
+    # No inline styles to avoid React/MDX parsing issues
+    icon_link = f' <sup><a href="{source_link}" target="_blank">↗</a></sup>'
     
     # Insert the icon right after the closing backtick
     # This handles headers like "### `function_name`"
