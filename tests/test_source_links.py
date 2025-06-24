@@ -76,15 +76,12 @@ def test_add_source_link_to_header():
         "### `function_name`",
         "https://github.com/owner/repo/blob/main/module.py#L42",
     )
-    assert result == "### `function_name` [source](https://github.com/owner/repo/blob/main/module.py#L42)"
+    # The icon should be inserted right after the closing backtick
+    expected = '### `function_name` <a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank" style="text-decoration: none;"><Icon icon="external-link" size={16} style={marginLeft: "0.5rem", opacity: 0.4, verticalAlign: "text-bottom"} /></a>'
+    assert result == expected
     
-    # Test with custom link text
-    result = add_source_link_to_header(
-        "### `function_name`",
-        "https://github.com/owner/repo/blob/main/module.py#L42",
-        "[view code]",
-    )
-    assert result == "### `function_name` [view code](https://github.com/owner/repo/blob/main/module.py#L42)"
+    # Test that it inserts after the backtick
+    assert "function_name` <a href=" in result
     
     # Test with no link
     result = add_source_link_to_header("### `function_name`", None)

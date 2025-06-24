@@ -139,5 +139,17 @@ def add_source_link_to_header(
     if not source_link:
         return header
     
-    # Add the link with some spacing
-    return f"{header} {link_text}({source_link})"
+    # Create a beautiful, minimal source link using Mintlify's Icon component
+    # Using a small, subtle icon that complements the header without being intrusive
+    # Positioned inline with elegant spacing
+    icon_link = f' <a href="{source_link}" target="_blank" style="text-decoration: none;"><Icon icon="external-link" size={{16}} style={{marginLeft: "0.5rem", opacity: 0.4, verticalAlign: "text-bottom"}} /></a>'
+    
+    # Insert the icon right after the closing backtick
+    # This handles headers like "### `function_name`"
+    if '`' in header:
+        # Find the last backtick
+        last_backtick_index = header.rfind('`')
+        return header[:last_backtick_index + 1] + icon_link + header[last_backtick_index + 1:]
+    else:
+        # Fallback: just append if no backticks found
+        return f"{header}{icon_link}"
