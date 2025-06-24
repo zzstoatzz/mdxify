@@ -86,3 +86,33 @@ def test_add_source_link_to_header():
     # Test with no link
     result = add_source_link_to_header("### `function_name`", None)
     assert result == "### `function_name`"
+
+
+def test_add_source_link_with_custom_text(monkeypatch):
+    """Test source link with custom environment variable."""
+    # Test with custom text
+    monkeypatch.setenv("MDXIFY_SOURCE_LINK_TEXT", "[src]")
+    result = add_source_link_to_header(
+        "### `function_name`",
+        "https://github.com/owner/repo/blob/main/module.py#L42",
+    )
+    expected = '### `function_name` <sup><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank">[src]</a></sup>'
+    assert result == expected
+    
+    # Test with emoji
+    monkeypatch.setenv("MDXIFY_SOURCE_LINK_TEXT", "🔗")
+    result = add_source_link_to_header(
+        "### `function_name`",
+        "https://github.com/owner/repo/blob/main/module.py#L42",
+    )
+    expected = '### `function_name` <sup><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank">🔗</a></sup>'
+    assert result == expected
+    
+    # Test with custom unicode
+    monkeypatch.setenv("MDXIFY_SOURCE_LINK_TEXT", "⧉")
+    result = add_source_link_to_header(
+        "### `function_name`",
+        "https://github.com/owner/repo/blob/main/module.py#L42",
+    )
+    expected = '### `function_name` <sup><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank">⧉</a></sup>'
+    assert result == expected

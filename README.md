@@ -91,7 +91,25 @@ mdxify --all --root-module mypackage
 mdxify --all --root-module mypackage --repo-url https://github.com/owner/repo --branch develop
 ```
 
-This adds [source] links next to each function/class/method that link directly to the code on GitHub.
+This adds source links next to each function/class/method that link directly to the code on GitHub.
+
+#### Customizing Source Link Text
+
+You can customize the link text/symbol using the `MDXIFY_SOURCE_LINK_TEXT` environment variable:
+
+```bash
+# Use custom text
+export MDXIFY_SOURCE_LINK_TEXT="[src]"
+mdxify --all --root-module mypackage
+
+# Use emoji
+export MDXIFY_SOURCE_LINK_TEXT="🔗"
+mdxify --all --root-module mypackage
+
+# Use different Unicode symbol (default is ↗)
+export MDXIFY_SOURCE_LINK_TEXT="⧉"
+mdxify --all --root-module mypackage
+```
 
 ## Features
 

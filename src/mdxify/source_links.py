@@ -1,5 +1,6 @@
 """Utilities for generating source code links."""
 
+import os
 import subprocess
 from pathlib import Path
 from typing import Optional
@@ -140,9 +141,10 @@ def add_source_link_to_header(
         return header
     
     # Create a subtle, elegant source link
-    # Using a superscript with a simple Unicode arrow
+    # Using a superscript with customizable link text
     # No inline styles to avoid React/MDX parsing issues
-    icon_link = f' <sup><a href="{source_link}" target="_blank">↗</a></sup>'
+    link_text_value = os.getenv("MDXIFY_SOURCE_LINK_TEXT", "↗")
+    icon_link = f' <sup><a href="{source_link}" target="_blank">{link_text_value}</a></sup>'
     
     # Insert the icon right after the closing backtick
     # This handles headers like "### `function_name`"
