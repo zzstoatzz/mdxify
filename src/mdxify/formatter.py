@@ -66,9 +66,17 @@ def format_docstring_with_griffe(docstring: str) -> str:
             elif section.kind.value == "examples" and section.value:
                 lines.append("**Examples:**")
                 lines.append("")
-                lines.append("```python")
-                lines.append(section.value.strip())
-                lines.append("```")
+                # Examples section value is a list of tuples (kind, text)
+                if isinstance(section.value, list):
+                    for item in section.value:
+                        if isinstance(item, tuple) and len(item) == 2:
+                            _, text = item
+                            lines.append(text.strip())
+                        else:
+                            lines.append(str(item).strip())
+                else:
+                    # Fallback for unexpected format
+                    lines.append(str(section.value).strip())
                 lines.append("")
 
         return "\n".join(lines)
