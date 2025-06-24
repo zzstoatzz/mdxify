@@ -1,6 +1,5 @@
 """Utilities for generating source code links."""
 
-import os
 import subprocess
 from pathlib import Path
 from typing import Optional
@@ -135,16 +134,14 @@ def add_source_link_to_header(
         link_text: Text for the link (default: "[source]")
     
     Returns:
-        Header with source link on the next line
+        Header with inline source link icon
     """
     if not source_link:
         return header
     
-    # Create a source link on a new line
-    # This prevents it from appearing in the sidebar navigation
-    # Using <sub> tag for smaller text which Mintlify supports
-    link_text_value = os.getenv("MDXIFY_SOURCE_LINK_TEXT", "view on GitHub ↗")
-    source_line = f'\n<sub>[{link_text_value}]({source_link})</sub>'
+    # Add GitHub icon inline with the header
+    # Using Mintlify's Icon component - let's see if it shows in nav
+    github_icon = f' <sup><a href="{source_link}"><Icon icon="github" size="14" /></a></sup>'
     
-    # Return header with source link on the next line
-    return f"{header}{source_line}"
+    # Return header with inline GitHub icon
+    return f"{header}{github_icon}"
