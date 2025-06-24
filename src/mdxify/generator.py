@@ -1,9 +1,10 @@
 """MDX documentation generation."""
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from .formatter import escape_mdx_content, format_docstring_with_griffe
+from .source_links import add_source_link_to_header, generate_source_link
 
 
 def is_module_empty(module_path: Path) -> bool:
@@ -18,8 +19,22 @@ def is_module_empty(module_path: Path) -> bool:
     )
 
 
-def generate_mdx(module_info: dict[str, Any], output_file: Path) -> None:
-    """Generate MDX documentation from module info."""
+def generate_mdx(
+    module_info: dict[str, Any], 
+    output_file: Path,
+    repo_url: Optional[str] = None,
+    branch: str = "main",
+    root_module: Optional[str] = None,
+) -> None:
+    """Generate MDX documentation from module info.
+    
+    Args:
+        module_info: Parsed module information
+        output_file: Path to write the MDX file
+        repo_url: GitHub repository URL for source links
+        branch: Git branch name for source links
+        root_module: Root module name for finding relative paths
+    """
     lines = []
 
     # Frontmatter
@@ -66,7 +81,20 @@ def generate_mdx(module_info: dict[str, Any], output_file: Path) -> None:
         lines.append("")
 
         for func in module_info["functions"]:
-            lines.append(f"### `{func['name']}`")
+            # Generate source link if possible
+            source_link = None
+            if repo_url and "source_file" in module_info and "line" in func:
+                source_link = generate_source_link(
+                    repo_url,
+                    branch,
+                    Path(module_info["source_file"]),
+                    func["line"],
+                    root_module,
+                )
+            
+            header = f"### `{func['name']}`"
+            header_with_link = add_source_link_to_header(header, source_link)
+            lines.append(header_with_link)
             lines.append("")
             lines.append("```python")
             lines.append(func["signature"])
@@ -86,7 +114,20 @@ def generate_mdx(module_info: dict[str, Any], output_file: Path) -> None:
         lines.append("")
 
         for cls in module_info["classes"]:
-            lines.append(f"### `{cls['name']}`")
+            # Generate source link if possible
+            source_link = None
+            if repo_url and "source_file" in module_info and "line" in cls:
+                source_link = generate_source_link(
+                    repo_url,
+                    branch,
+                    Path(module_info["source_file"]),
+                    cls["line"],
+                    root_module,
+                )
+            
+            header = f"### `{cls['name']}`"
+            header_with_link = add_source_link_to_header(header, source_link)
+            lines.append(header_with_link)
             lines.append("")
 
             if cls["docstring"]:
@@ -101,7 +142,20 @@ def generate_mdx(module_info: dict[str, Any], output_file: Path) -> None:
                 lines.append("")
 
                 for method in cls["methods"]:
-                    lines.append(f"#### `{method['name']}`")
+                    # Generate source link if possible
+                    method_source_link = None
+                    if repo_url and "source_file" in module_info and "line" in method:
+                        method_source_link = generate_source_link(
+                            repo_url,
+                            branch,
+                            Path(module_info["source_file"]),
+                            method["line"],
+                            root_module,
+                        )
+                    
+                    method_header = f"#### `{method['name']}`"
+                    method_header_with_link = add_source_link_to_header(method_header, method_source_link)
+                    lines.append(method_header_with_link)
                     lines.append("")
                     lines.append("```python")
                     lines.append(method["signature"])

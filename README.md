@@ -38,6 +38,8 @@ mdxify --all --root-module mypackage --exclude mypackage.internal --exclude mypa
 - `--skip-empty-parents`: Skip parent modules that only contain boilerplate (default: False)
 - `--anchor-name` / `--navigation-key`: Name of the navigation anchor or group to update (default: 'SDK Reference')
 - `--exclude`: Module to exclude from documentation (can be specified multiple times). Excludes the module and all its submodules.
+- `--repo-url`: GitHub repository URL for source code links (e.g., https://github.com/owner/repo). If not provided, will attempt to detect from git remote.
+- `--branch`: Git branch name for source code links (default: main)
 
 ### Navigation Updates
 
@@ -76,6 +78,20 @@ mdxify can automatically update your `docs.json` navigation by finding either an
 2. **Subsequent runs**: mdxify will find and update the existing anchor or group directly - no placeholder needed!
 
 The `--anchor-name` parameter (or its alias `--navigation-key`) identifies which anchor or group to update.
+
+### Source Code Links
+
+mdxify can automatically add links to source code on GitHub for all functions, classes, and methods:
+
+```bash
+# Auto-detect repository from git remote
+mdxify --all --root-module mypackage
+
+# Or specify repository explicitly
+mdxify --all --root-module mypackage --repo-url https://github.com/owner/repo --branch develop
+```
+
+This adds [source] links next to each function/class/method that link directly to the code on GitHub.
 
 ## Features
 

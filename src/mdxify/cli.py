@@ -9,6 +9,7 @@ from .discovery import find_all_modules, get_module_source_file, should_include_
 from .generator import generate_mdx
 from .navigation import update_docs_json
 from .parser import parse_module_fast
+from .source_links import detect_github_repo_url
 
 
 def remove_excluded_files(output_dir: Path, exclude_patterns: list[str]) -> int:
@@ -92,6 +93,15 @@ def main():
         action="append",
         help="Module to exclude from documentation (can be specified multiple times). Excludes the module and all its submodules.",
     )
+    parser.add_argument(
+        "--repo-url",
+        help="GitHub repository URL for source code links (e.g., https://github.com/owner/repo). If not provided, will attempt to detect from git remote.",
+    )
+    parser.add_argument(
+        "--branch",
+        default="main",
+        help="Git branch name for source code links (default: main)",
+    )
 
     args = parser.parse_args()
 
@@ -152,6 +162,13 @@ def main():
         if removed_count > 0:
             print(f"Removed {removed_count} existing MDX files for excluded modules")
 
+    # Determine repository URL for source links
+    repo_url = args.repo_url
+    if not repo_url:
+        repo_url = detect_github_repo_url()
+        if repo_url:
+            print(f"Detected repository: {repo_url}")
+    
     # Generate documentation
     generated_modules = []
     failed_modules = []
@@ -198,7 +215,13 @@ def main():
             else:
                 output_file = args.output_dir / f"{module_name.replace('.', '-')}.mdx"
 
-            generate_mdx(module_info, output_file)
+            generate_mdx(
+                module_info, 
+                output_file,
+                repo_url=repo_url,
+                branch=args.branch,
+                root_module=args.root_module,
+            )
 
             module_time = time.time() - module_start
             print(f" done ({module_time:.2f}s)")
