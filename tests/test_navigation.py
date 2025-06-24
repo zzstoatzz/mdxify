@@ -161,7 +161,7 @@ def test_update_docs_json_without_placeholder(tmp_path, capsys):
     # Should return False and print warning
     assert result is False
     captured = capsys.readouterr()
-    assert "Could not find mdxify anchor 'SDK Reference' or placeholder" in captured.out
+    assert "Could not find mdxify anchor/group 'SDK Reference' or placeholder" in captured.out
     assert '{"$mdxify": "generated"}' in captured.out
 
 

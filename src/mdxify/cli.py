@@ -82,8 +82,10 @@ def main():
     )
     parser.add_argument(
         "--anchor-name",
+        "--navigation-key",
+        dest="navigation_key",
         default="SDK Reference",
-        help="Name of the navigation anchor to update (default: 'SDK Reference')",
+        help="Name of the navigation anchor or group to update (default: 'SDK Reference')",
     )
     parser.add_argument(
         "--exclude",
@@ -221,7 +223,7 @@ def main():
                 args.output_dir,
                 regenerate_all=regenerate_all,
                 skip_empty_parents=args.skip_empty_parents,
-                anchor_name=args.anchor_name
+                anchor_name=args.navigation_key
             )
             if success:
                 print("Navigation updated successfully")

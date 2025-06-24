@@ -203,17 +203,17 @@ def find_mdxify_placeholder(obj: Any, path: list[str] | None = None) -> tuple[An
     return None
 
 
-def find_mdxify_anchor(docs_config: dict[str, Any], anchor_name: str) -> tuple[Any, list[str]] | None:
-    """Find an existing mdxify-managed anchor in the navigation.
+def find_mdxify_anchor_or_group(docs_config: dict[str, Any], target_name: str) -> tuple[Any, list[str]] | None:
+    """Find an existing mdxify-managed anchor or group in the navigation.
     
     Returns the pages list and path to it, or None if not found.
     """
     
-    def search_anchor_in_structure(obj: Any, current_path: list[str], target_anchor: str) -> tuple[Any, list[str]] | None:
-        """Recursively search for an anchor with the given name."""
+    def search_in_structure(obj: Any, current_path: list[str], target: str) -> tuple[Any, list[str]] | None:
+        """Recursively search for an anchor or group with the given name."""
         if isinstance(obj, dict):
             # Check if this is an anchor with the target name
-            if obj.get("anchor") == target_anchor:
+            if obj.get("anchor") == target:
                 pages = obj.get("pages", [])
                 pages_path = current_path + ["pages"]
                 
@@ -227,16 +227,31 @@ def find_mdxify_anchor(docs_config: dict[str, Any], anchor_name: str) -> tuple[A
                 if pages:
                     return (pages, None), pages_path
             
+            # Check if this is a group with the target name
+            if obj.get("group") == target:
+                pages = obj.get("pages", [])
+                pages_path = current_path + ["pages"]
+                
+                # Check for placeholder
+                for j, page in enumerate(pages):
+                    if isinstance(page, dict) and page.get("$mdxify") == "generated":
+                        return (pages, j), pages_path
+                
+                # If we found the group but no placeholder, return it anyway
+                # The caller will decide whether to update based on the content
+                if pages:
+                    return (pages, None), pages_path
+            
             # Recursively search in all dict values
             for key, value in obj.items():
-                result = search_anchor_in_structure(value, current_path + [key], target_anchor)
+                result = search_in_structure(value, current_path + [key], target)
                 if result:
                     return result
                     
         elif isinstance(obj, list):
             # Search through list items
             for i, item in enumerate(obj):
-                result = search_anchor_in_structure(item, current_path + [i], target_anchor)
+                result = search_in_structure(item, current_path + [i], target)
                 if result:
                     return result
         
@@ -244,7 +259,18 @@ def find_mdxify_anchor(docs_config: dict[str, Any], anchor_name: str) -> tuple[A
     
     # Start searching from the navigation root
     navigation = docs_config.get("navigation", {})
-    return search_anchor_in_structure(navigation, ["navigation"], anchor_name)
+    return search_in_structure(navigation, ["navigation"], target_name)
+
+
+# Keep the old function for backwards compatibility, but have it use the new one
+def find_mdxify_anchor(docs_config: dict[str, Any], anchor_name: str) -> tuple[Any, list[str]] | None:
+    """Find an existing mdxify-managed anchor in the navigation.
+    
+    This function is kept for backwards compatibility but now searches for both anchors and groups.
+    
+    Returns the pages list and path to it, or None if not found.
+    """
+    return find_mdxify_anchor_or_group(docs_config, anchor_name)
 
 
 def update_docs_json(
@@ -253,49 +279,68 @@ def update_docs_json(
     output_dir: Path,
     regenerate_all: bool = False,
     skip_empty_parents: bool = False,
-    anchor_name: str = "SDK Reference"
+    anchor_name: str = "SDK Reference"  # Renamed parameter would break compatibility
 ) -> bool:
     """Update docs.json with generated module documentation.
     
-    First looks for an existing anchor with the given name to update.
+    First looks for an existing anchor or group with the given name to update.
     If not found, looks for {"$mdxify": "generated"} placeholder.
+    
+    Args:
+        docs_json_path: Path to docs.json file
+        generated_modules: List of module names that were generated
+        output_dir: Directory where MDX files are written
+        regenerate_all: If True, replace all content; if False, merge with existing
+        skip_empty_parents: Whether to skip empty parent modules
+        anchor_name: Name of the navigation anchor or group to update (searches both)
+            Note: Despite the parameter name, this searches for both anchors and groups.
     
     Returns True if successfully updated, False otherwise.
     """
     with open(docs_json_path, "r") as f:
         docs_config = json.load(f)
 
-    # First, try to find an existing anchor
-    result = find_mdxify_anchor(docs_config, anchor_name)
+    # Use a more descriptive internal name
+    navigation_key = anchor_name
+    
+    # First, try to find an existing anchor or group
+    result = find_mdxify_anchor_or_group(docs_config, navigation_key)
     
     if not result:
-        # No existing anchor, look for placeholder
+        # No existing anchor/group, look for placeholder
         result = find_mdxify_placeholder(docs_config)
         
         if not result:
             print(f"""
-Warning: Could not find mdxify anchor '{anchor_name}' or placeholder in docs.json
+Warning: Could not find mdxify anchor/group '{anchor_name}' or placeholder in docs.json
 
 To use automatic navigation updates, either:
 
-1. Add a placeholder in your docs.json:
+1. Add a placeholder in your docs.json using an anchor:
 {{
   "navigation": [
     {{
       "anchor": "{anchor_name}",
-      "groups": [
-        {{
-          "group": "Modules",
-          "pages": [
-            {{"$mdxify": "generated"}}
-          ]
-        }}
+      "pages": [
+        {{"$mdxify": "generated"}}
       ]
     }}
   ]
 }}
 
-2. Or use --no-update-nav and manually add the generated files to your navigation.
+2. Or using a group:
+{{
+  "navigation": [
+    {{
+      "group": "{anchor_name}",
+      "pages": [
+        {{"$mdxify": "generated"}}
+      ]
+    }}
+  ]
+}}
+
+3. Or use --no-update-nav and manually add the generated files to your navigation.
 """)
             return False
 

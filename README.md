@@ -36,36 +36,46 @@ mdxify --all --root-module mypackage --exclude mypackage.internal --exclude mypa
 - `--output-dir`: Output directory for generated MDX files (default: docs/python-sdk)
 - `--update-nav/--no-update-nav`: Update docs.json navigation (default: True)
 - `--skip-empty-parents`: Skip parent modules that only contain boilerplate (default: False)
-- `--anchor-name`: Name of the navigation anchor to update (default: 'SDK Reference')
+- `--anchor-name` / `--navigation-key`: Name of the navigation anchor or group to update (default: 'SDK Reference')
 - `--exclude`: Module to exclude from documentation (can be specified multiple times). Excludes the module and all its submodules.
 
 ### Navigation Updates
 
-mdxify can automatically update your `docs.json` navigation in two ways:
+mdxify can automatically update your `docs.json` navigation by finding either anchors or groups:
 
-1. **First run**: Add a placeholder in your `docs.json`:
+1. **First run**: Add a placeholder in your `docs.json` using either format:
 
+**Anchor format (e.g., FastMCP):**
 ```json
 {
   "navigation": [
     {
       "anchor": "SDK Reference",
-      "groups": [
-        {
-          "group": "Modules", 
-          "pages": [
-            {"$mdxify": "generated"}
-          ]
-        }
+      "pages": [
+        {"$mdxify": "generated"}
       ]
     }
   ]
 }
 ```
 
-2. **Subsequent runs**: mdxify will find and update the existing anchor directly - no placeholder needed!
+**Group format (e.g., Prefect):**
+```json
+{
+  "navigation": [
+    {
+      "group": "SDK Reference",
+      "pages": [
+        {"$mdxify": "generated"}
+      ]
+    }
+  ]
+}
+```
 
-The navigation structure uses the `--anchor-name` parameter (default: "SDK Reference") to identify which section to update.
+2. **Subsequent runs**: mdxify will find and update the existing anchor or group directly - no placeholder needed!
+
+The `--anchor-name` parameter (or its alias `--navigation-key`) identifies which anchor or group to update.
 
 ## Features
 
