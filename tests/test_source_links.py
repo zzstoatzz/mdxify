@@ -76,12 +76,12 @@ def test_add_source_link_to_header():
         "### `function_name`",
         "https://github.com/owner/repo/blob/main/module.py#L42",
     )
-    # The icon should be inserted right after the closing backtick
-    expected = '### `function_name` <sup><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank">↗</a></sup>'
+    # The link should be on a new line with default text
+    expected = '### `function_name`\n<small><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank">view on GitHub ↗</a></small>'
     assert result == expected
     
-    # Test that it inserts after the backtick
-    assert "function_name` <sup><a href=" in result
+    # Test that link is on new line
+    assert "### `function_name`\n<small>" in result
     
     # Test with no link
     result = add_source_link_to_header("### `function_name`", None)
@@ -96,7 +96,7 @@ def test_add_source_link_with_custom_text(monkeypatch):
         "### `function_name`",
         "https://github.com/owner/repo/blob/main/module.py#L42",
     )
-    expected = '### `function_name` <sup><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank">[src]</a></sup>'
+    expected = '### `function_name`\n<small><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank">[src]</a></small>'
     assert result == expected
     
     # Test with emoji
@@ -105,7 +105,7 @@ def test_add_source_link_with_custom_text(monkeypatch):
         "### `function_name`",
         "https://github.com/owner/repo/blob/main/module.py#L42",
     )
-    expected = '### `function_name` <sup><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank">🔗</a></sup>'
+    expected = '### `function_name`\n<small><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank">🔗</a></small>'
     assert result == expected
     
     # Test with custom unicode
@@ -114,5 +114,5 @@ def test_add_source_link_with_custom_text(monkeypatch):
         "### `function_name`",
         "https://github.com/owner/repo/blob/main/module.py#L42",
     )
-    expected = '### `function_name` <sup><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank">⧉</a></sup>'
+    expected = '### `function_name`\n<small><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank">⧉</a></small>'
     assert result == expected

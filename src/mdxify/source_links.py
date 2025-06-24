@@ -135,23 +135,15 @@ def add_source_link_to_header(
         link_text: Text for the link (default: "[source]")
     
     Returns:
-        Header with source link appended
+        Header with source link on the next line
     """
     if not source_link:
         return header
     
-    # Create a subtle, elegant source link
-    # Using a superscript with customizable link text
-    # No inline styles to avoid React/MDX parsing issues
-    link_text_value = os.getenv("MDXIFY_SOURCE_LINK_TEXT", "↗")
-    icon_link = f' <sup><a href="{source_link}" target="_blank">{link_text_value}</a></sup>'
+    # Create a source link on a new line with small text
+    # This prevents it from appearing in the sidebar navigation
+    link_text_value = os.getenv("MDXIFY_SOURCE_LINK_TEXT", "view on GitHub ↗")
+    source_line = f'\n<small><a href="{source_link}" target="_blank">{link_text_value}</a></small>'
     
-    # Insert the icon right after the closing backtick
-    # This handles headers like "### `function_name`"
-    if '`' in header:
-        # Find the last backtick
-        last_backtick_index = header.rfind('`')
-        return header[:last_backtick_index + 1] + icon_link + header[last_backtick_index + 1:]
-    else:
-        # Fallback: just append if no backticks found
-        return f"{header}{icon_link}"
+    # Return header with source link on the next line
+    return f"{header}{source_line}"

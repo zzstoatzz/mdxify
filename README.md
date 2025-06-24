@@ -106,7 +106,7 @@ mdxify --all --root-module mypackage
 export MDXIFY_SOURCE_LINK_TEXT="🔗"
 mdxify --all --root-module mypackage
 
-# Use different Unicode symbol (default is ↗)
+# Use different Unicode symbol (default is "view on GitHub ↗")
 export MDXIFY_SOURCE_LINK_TEXT="⧉"
 mdxify --all --root-module mypackage
 ```
