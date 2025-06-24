@@ -139,10 +139,10 @@ def add_source_link_to_header(
     if not source_link:
         return header
     
-    # Create a beautiful, minimal source link using Mintlify's Icon component
-    # Using a small, subtle icon that complements the header without being intrusive
-    # Positioned inline with elegant spacing
-    icon_link = f' <a href="{source_link}" target="_blank" style="text-decoration: none;"><Icon icon="external-link" size={{16}} style={{marginLeft: "0.5rem", opacity: 0.4, verticalAlign: "text-bottom"}} /></a>'
+    # Create a subtle, elegant source link
+    # Using a simple Unicode arrow that won't break MDX parsing
+    # Styled to be unobtrusive but functional
+    icon_link = f' <a href="{source_link}" target="_blank" style="text-decoration: none; opacity: 0.5; font-size: 0.875em; margin-left: 0.25rem;">↗</a>'
     
     # Insert the icon right after the closing backtick
     # This handles headers like "### `function_name`"
