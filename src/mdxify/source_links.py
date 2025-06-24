@@ -140,10 +140,11 @@ def add_source_link_to_header(
     if not source_link:
         return header
     
-    # Create a source link on a new line with small text
+    # Create a source link on a new line
     # This prevents it from appearing in the sidebar navigation
+    # Using <sub> tag for smaller text which Mintlify supports
     link_text_value = os.getenv("MDXIFY_SOURCE_LINK_TEXT", "view on GitHub ↗")
-    source_line = f'\n<small><a href="{source_link}" target="_blank">{link_text_value}</a></small>'
+    source_line = f'\n<sub>[{link_text_value}]({source_link})</sub>'
     
     # Return header with source link on the next line
     return f"{header}{source_line}"

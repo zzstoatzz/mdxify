@@ -77,11 +77,11 @@ def test_add_source_link_to_header():
         "https://github.com/owner/repo/blob/main/module.py#L42",
     )
     # The link should be on a new line with default text
-    expected = '### `function_name`\n<small><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank">view on GitHub ↗</a></small>'
+    expected = '### `function_name`\n<sub>[view on GitHub ↗](https://github.com/owner/repo/blob/main/module.py#L42)</sub>'
     assert result == expected
     
     # Test that link is on new line
-    assert "### `function_name`\n<small>" in result
+    assert "### `function_name`\n<sub>" in result
     
     # Test with no link
     result = add_source_link_to_header("### `function_name`", None)
@@ -96,7 +96,7 @@ def test_add_source_link_with_custom_text(monkeypatch):
         "### `function_name`",
         "https://github.com/owner/repo/blob/main/module.py#L42",
     )
-    expected = '### `function_name`\n<small><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank">[src]</a></small>'
+    expected = '### `function_name`\n<sub>[[src]](https://github.com/owner/repo/blob/main/module.py#L42)</sub>'
     assert result == expected
     
     # Test with emoji
@@ -105,7 +105,7 @@ def test_add_source_link_with_custom_text(monkeypatch):
         "### `function_name`",
         "https://github.com/owner/repo/blob/main/module.py#L42",
     )
-    expected = '### `function_name`\n<small><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank">🔗</a></small>'
+    expected = '### `function_name`\n<sub>[🔗](https://github.com/owner/repo/blob/main/module.py#L42)</sub>'
     assert result == expected
     
     # Test with custom unicode
@@ -114,5 +114,5 @@ def test_add_source_link_with_custom_text(monkeypatch):
         "### `function_name`",
         "https://github.com/owner/repo/blob/main/module.py#L42",
     )
-    expected = '### `function_name`\n<small><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank">⧉</a></small>'
+    expected = '### `function_name`\n<sub>[⧉](https://github.com/owner/repo/blob/main/module.py#L42)</sub>'
     assert result == expected
