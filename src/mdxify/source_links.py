@@ -141,7 +141,7 @@ def add_source_link_to_header(
     
     # Add GitHub icon inline with the header
     # Using Mintlify's Icon component - let's see if it shows in nav
-    github_icon = f' <sup><a href="{source_link}"><Icon icon="github" size="14" /></a></sup>'
+    github_icon = f' <sup><a href="{source_link}" target="_blank"><Icon icon="github" size="14" /></a></sup>'
     
     # Return header with inline GitHub icon
     return f"{header}{github_icon}"
