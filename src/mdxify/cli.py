@@ -3,6 +3,7 @@
 import argparse
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from .discovery import find_all_modules, get_module_source_file, should_include_module
@@ -175,27 +176,29 @@ def main():
 
     start_time = time.time()
 
-    for i, module_name in enumerate(modules_to_process, 1):
+    def process_module(module_data):
+        """Process a single module."""
+        i, module_name = module_data
+        
         # Skip internal modules
         if not should_include_module(module_name):
-            print(
-                f"[{i}/{len(modules_to_process)}] Skipping {module_name} (internal module)"
+            return (
+                f"[{i}/{len(modules_to_process)}] Skipping {module_name} (internal module)",
+                None,
+                None,
+                "skipped"
             )
-            continue
 
         source_file = get_module_source_file(module_name)
         if not source_file:
-            print(
-                f"[{i}/{len(modules_to_process)}] Skipping {module_name} (no source file)"
+            return (
+                f"[{i}/{len(modules_to_process)}] Skipping {module_name} (no source file)",
+                None,
+                None,
+                "skipped"
             )
-            continue
 
         try:
-            print(
-                f"[{i}/{len(modules_to_process)}] Processing {module_name}...",
-                end="",
-                flush=True,
-            )
             module_start = time.time()
 
             module_info = parse_module_fast(module_name, source_file)
@@ -224,12 +227,37 @@ def main():
             )
 
             module_time = time.time() - module_start
-            print(f" done ({module_time:.2f}s)")
-
-            generated_modules.append(module_name)
+            return (
+                f"[{i}/{len(modules_to_process)}] Processing {module_name}... done ({module_time:.2f}s)",
+                module_name,
+                None,
+                "success"
+            )
         except Exception as e:
-            print(f" failed: {e}")
-            failed_modules.append((module_name, str(e)))
+            return (
+                f"[{i}/{len(modules_to_process)}] Processing {module_name}... failed: {e}",
+                None,
+                (module_name, str(e)),
+                "failed"
+            )
+
+    # Process modules in parallel
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        # Submit all tasks
+        future_to_module = {
+            executor.submit(process_module, (i, module_name)): module_name
+            for i, module_name in enumerate(modules_to_process, 1)
+        }
+        
+        # Process results as they complete
+        for future in as_completed(future_to_module):
+            message, success_module, failed_module, status = future.result()
+            print(message)
+            
+            if success_module:
+                generated_modules.append(success_module)
+            if failed_module:
+                failed_modules.append(failed_module)
 
     total_time = time.time() - start_time
 

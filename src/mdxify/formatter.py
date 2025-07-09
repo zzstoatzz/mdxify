@@ -5,6 +5,13 @@ import textwrap
 
 from griffe import Docstring
 
+# Pre-compile regex patterns for better performance
+_CODE_BLOCK_PATTERN = re.compile(r"(```[\s\S]*?```|`[^`]+`)")
+_TYPE_ANNOTATION_PATTERN = re.compile(
+    r"\b(dict|list|tuple|set|type|Optional|Union|Callable|TypeVar|Generic|Literal|Any)\["
+)
+_ANGLE_BRACKET_PATTERN = re.compile(r"<([^>]+)>")
+
 
 def format_docstring_with_griffe(docstring: str) -> str:
     """Format a docstring using Griffe for better structure."""
@@ -97,20 +104,14 @@ def escape_mdx_content(content: str) -> str:
     last_end = 0
 
     # Find all code blocks and inline code
-    code_block_pattern = r"(```[\s\S]*?```|`[^`]+`)"
-
-    for match in re.finditer(code_block_pattern, content):
+    for match in _CODE_BLOCK_PATTERN.finditer(content):
         # Add the text before the code block (escaped)
         text_before = content[last_end : match.start()]
         if text_before:
             # Escape square brackets in type annotations outside code blocks
-            text_before = re.sub(
-                r"\b(dict|list|tuple|set|type|Optional|Union|Callable|TypeVar|Generic|Literal|Any)\[",
-                r"\1\\[",
-                text_before,
-            )
+            text_before = _TYPE_ANNOTATION_PATTERN.sub(r"\1\\[", text_before)
             # Replace angle brackets with HTML entities to prevent MDX from parsing as tags
-            text_before = re.sub(r"<([^>]+)>", r"&lt;\1&gt;", text_before)
+            text_before = _ANGLE_BRACKET_PATTERN.sub(r"&lt;\1&gt;", text_before)
             # Escape TODO: which can be interpreted as MDX directive
             text_before = text_before.replace("TODO:", "TODO\\:")
         parts.append(text_before)
@@ -123,13 +124,9 @@ def escape_mdx_content(content: str) -> str:
     # Add any remaining text after the last code block (escaped)
     remaining_text = content[last_end:]
     if remaining_text:
-        remaining_text = re.sub(
-            r"\b(dict|list|tuple|set|type|Optional|Union|Callable|TypeVar|Generic|Literal|Any)\[",
-            r"\1\\[",
-            remaining_text,
-        )
+        remaining_text = _TYPE_ANNOTATION_PATTERN.sub(r"\1\\[", remaining_text)
         # Replace angle brackets with HTML entities to prevent MDX from parsing as tags
-        remaining_text = re.sub(r"<([^>]+)>", r"&lt;\1&gt;", remaining_text)
+        remaining_text = _ANGLE_BRACKET_PATTERN.sub(r"&lt;\1&gt;", remaining_text)
         # Escape TODO: which can be interpreted as MDX directive
         remaining_text = remaining_text.replace("TODO:", "TODO\\:")
     parts.append(remaining_text)
