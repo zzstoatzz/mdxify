@@ -1,8 +1,12 @@
 """AST-based module parsing functionality."""
 
 import ast
+import re
 from pathlib import Path
 from typing import Any
+
+# Pre-compile regex for better performance
+_RAISES_PATTERN = re.compile(r"^(\s*)Raises\s*$", re.MULTILINE)
 
 
 def extract_docstring(node: ast.AST) -> str:
@@ -17,11 +21,7 @@ def extract_docstring(node: ast.AST) -> str:
             docstring = node.body[0].value.value
             # Fix common docstring issues that break MDX parsing
             # Replace "Raises" at the start of a line with "Raises:"
-            import re
-
-            docstring = re.sub(
-                r"^(\s*)Raises\s*$", r"\1Raises:", docstring, flags=re.MULTILINE
-            )
+            docstring = _RAISES_PATTERN.sub(r"\1Raises:", docstring)
             return docstring
     return ""
 
@@ -80,8 +80,9 @@ def parse_module_fast(module_name: str, source_file: Path) -> dict[str, Any]:
         "source_file": str(source_file),
     }
 
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ClassDef):
+    # Only traverse top-level nodes instead of using ast.walk
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
             class_info = {
                 "name": node.name,
                 "docstring": extract_docstring(node),
@@ -100,25 +101,21 @@ def parse_module_fast(module_name: str, source_file: Path) -> dict[str, Any]:
                     }
                     class_info["methods"].append(method_info)
 
-            if not node.name.startswith("_"):
-                module_info["classes"].append(class_info)
+            module_info["classes"].append(class_info)
 
-        elif (
-            isinstance(node, ast.FunctionDef) and node.col_offset == 0
-        ):  # Top-level functions
-            if not node.name.startswith("_"):
-                # Skip overloaded function definitions
-                has_overload = any(
-                    isinstance(decorator, ast.Name) and decorator.id == "overload"
-                    for decorator in node.decorator_list
-                )
-                if not has_overload:
-                    func_info = {
-                        "name": node.name,
-                        "signature": extract_function_signature(node),
-                        "docstring": extract_docstring(node),
-                        "line": node.lineno,
-                    }
-                    module_info["functions"].append(func_info)
+        elif isinstance(node, ast.FunctionDef) and not node.name.startswith("_"):
+            # Skip overloaded function definitions
+            has_overload = any(
+                isinstance(decorator, ast.Name) and decorator.id == "overload"
+                for decorator in node.decorator_list
+            )
+            if not has_overload:
+                func_info = {
+                    "name": node.name,
+                    "signature": extract_function_signature(node),
+                    "docstring": extract_docstring(node),
+                    "line": node.lineno,
+                }
+                module_info["functions"].append(func_info)
 
     return module_info
