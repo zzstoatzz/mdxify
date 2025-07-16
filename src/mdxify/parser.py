@@ -11,7 +11,7 @@ _RAISES_PATTERN = re.compile(r"^(\s*)Raises\s*$", re.MULTILINE)
 
 def extract_docstring(node: ast.AST) -> str:
     """Extract docstring from an AST node."""
-    if isinstance(node, (ast.FunctionDef, ast.ClassDef, ast.Module)):
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Module)):
         if (
             node.body
             and isinstance(node.body[0], ast.Expr)
@@ -34,7 +34,7 @@ def format_arg(arg: ast.arg) -> str:
     return result
 
 
-def extract_function_signature(node: ast.FunctionDef) -> str:
+def extract_function_signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
     """Extract function signature."""
     args = []
 
@@ -92,7 +92,7 @@ def parse_module_fast(module_name: str, source_file: Path, include_internal: boo
 
             # Extract methods
             for item in node.body:
-                if isinstance(item, ast.FunctionDef) and (include_internal or not item.name.startswith("_")):
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and (include_internal or not item.name.startswith("_")):
                     method_info = {
                         "name": item.name,
                         "signature": extract_function_signature(item),
@@ -103,7 +103,7 @@ def parse_module_fast(module_name: str, source_file: Path, include_internal: boo
 
             module_info["classes"].append(class_info)
 
-        elif isinstance(node, ast.FunctionDef) and (include_internal or not node.name.startswith("_")):
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and (include_internal or not node.name.startswith("_")):
             # Skip overloaded function definitions
             has_overload = any(
                 isinstance(decorator, ast.Name) and decorator.id == "overload"
