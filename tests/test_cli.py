@@ -78,7 +78,7 @@ def test_cli_processes_specified_modules():
         assert exc_info.value.code == 0  # type: ignore
         
         # Verify module was processed
-        mock_parse.assert_called_once_with("mypackage.core", Path("mypackage/core.py"))
+        mock_parse.assert_called_once_with("mypackage.core", Path("mypackage/core.py"), False)
         mock_generate.assert_called_once()
         
         # Check output path
@@ -113,7 +113,7 @@ def test_exclude_modules():
         ]
         mock_source.side_effect = lambda m: Path(f"{m.replace('.', '/')}.py")
         mock_should_include.return_value = True
-        mock_parse.side_effect = lambda name, path: {
+        mock_parse.side_effect = lambda name, path, include_internal: {
             "name": name,
             "docstring": f"Module {name}",
             "functions": [],
@@ -168,7 +168,7 @@ def test_exclude_removes_existing_files(tmp_path):
         mock_find.return_value = ["mypackage", "mypackage.core"]
         mock_source.side_effect = lambda m: Path(f"{m.replace('.', '/')}.py")
         mock_should_include.return_value = True
-        mock_parse.side_effect = lambda name, path: {
+        mock_parse.side_effect = lambda name, path, include_internal: {
             "name": name,
             "docstring": f"Module {name}",
             "functions": [],
@@ -212,3 +212,49 @@ def test_remove_excluded_files_helper(tmp_path):
     # Test with non-existent directory
     removed = remove_excluded_files(tmp_path / "nonexistent", ["anything"])
     assert removed == 0
+
+
+def test_include_internal():
+    """Test that --include-internal properly includes internal modules."""
+    with patch("mdxify.cli.find_all_modules") as mock_find, \
+         patch("mdxify.cli.get_module_source_file") as mock_source, \
+         patch("mdxify.cli.should_include_module") as mock_should_include, \
+         patch("mdxify.cli.parse_module_fast") as mock_parse, \
+         patch("mdxify.cli.generate_mdx") as mock_generate, \
+         patch.object(sys, "argv", [
+             "mdxify", "--all", "--root-module", "mypackage",
+             "--no-update-nav",
+             "--include-internal"
+         ]):
+        
+        # Setup mocks
+        mock_find.return_value = [
+            "mypackage",
+            "mypackage.core",
+            "mypackage.flows",
+            "mypackage.flows._private",
+        ]
+        mock_source.side_effect = lambda m: Path(f"{m.replace('.', '/')}.py")
+        mock_should_include.return_value = True
+        mock_parse.side_effect = lambda name, path, include_internal: {
+            "name": name,
+            "docstring": f"Module {name}",
+            "functions": [],
+            "classes": []
+        }
+        
+        # Run
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        
+        assert exc_info.value.code == 0  # type: ignore
+        
+        # Check that all modules, including internal ones, were processed
+        processed_modules = [call[0][0]["name"] for call in mock_generate.call_args_list]
+        assert "mypackage" in processed_modules
+        assert "mypackage.core" in processed_modules
+        assert "mypackage.flows" in processed_modules
+        assert "mypackage.flows._private" in processed_modules
+        
+        # Should have processed 4 modules total
+        assert len(processed_modules) == 4

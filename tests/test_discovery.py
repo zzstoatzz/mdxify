@@ -12,6 +12,13 @@ def test_should_include_module_excludes_private():
     assert should_include_module("mypackage.flows._private") is False
 
 
+def test_should_include_module_includes_private_when_include_internal_is_set():
+    """Test that private modules are included when include_internal is True."""
+    assert should_include_module("mypackage.flows", include_internal=True) is True
+    assert should_include_module("mypackage._internal", include_internal=True) is True
+    assert should_include_module("mypackage.flows._private", include_internal=True) is True
+
+
 def test_should_include_module_excludes_known_patterns():
     """Test that modules are included by default unless they have underscore prefix."""
     # These should now be included since we don't exclude based on keywords

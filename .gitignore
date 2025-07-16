@@ -12,3 +12,6 @@ sandbox/
 
 # Environment files
 .env
+
+# Version tracking
+src/mdxify/_version.py

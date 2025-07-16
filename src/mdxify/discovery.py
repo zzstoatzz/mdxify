@@ -35,13 +35,13 @@ def find_all_modules(root_module: str) -> list[str]:
     return sorted(modules)
 
 
-def should_include_module(module_name: str) -> bool:
+def should_include_module(module_name: str, include_internal: bool = False) -> bool:
     """Check if a module should be included in the API documentation."""
     parts = module_name.split(".")
 
     # Exclude any module or submodule that starts with underscore
     for part in parts[1:]:  # Skip the root module
-        if part.startswith("_"):
+        if part.startswith("_") and not include_internal:
             return False
 
     return True
