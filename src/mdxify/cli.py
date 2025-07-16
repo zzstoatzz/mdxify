@@ -184,10 +184,10 @@ def main():
 
     def process_module(module_data):
         """Process a single module."""
-        i, module_name = module_data
+        i, module_name, include_internal = module_data
         
         # Skip internal modules
-        if not should_include_module(module_name) and not args.include_internal:
+        if not should_include_module(module_name, include_internal):
             return (
                 f"[{i}/{len(modules_to_process)}] Skipping {module_name} (internal module)",
                 None,
@@ -207,7 +207,7 @@ def main():
         try:
             module_start = time.time()
 
-            module_info = parse_module_fast(module_name, source_file)
+            module_info = parse_module_fast(module_name, source_file, include_internal)
 
             # Check if this module has submodules
             has_submodules = any(
@@ -251,7 +251,7 @@ def main():
     with ThreadPoolExecutor(max_workers=8) as executor:
         # Submit all tasks
         future_to_module = {
-            executor.submit(process_module, (i, module_name)): module_name
+            executor.submit(process_module, (i, module_name, args.include_internal)): module_name
             for i, module_name in enumerate(modules_to_process, 1)
         }
         

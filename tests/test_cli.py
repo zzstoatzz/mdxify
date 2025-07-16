@@ -78,7 +78,7 @@ def test_cli_processes_specified_modules():
         assert exc_info.value.code == 0  # type: ignore
         
         # Verify module was processed
-        mock_parse.assert_called_once_with("mypackage.core", Path("mypackage/core.py"))
+        mock_parse.assert_called_once_with("mypackage.core", Path("mypackage/core.py"), False)
         mock_generate.assert_called_once()
         
         # Check output path
@@ -113,7 +113,7 @@ def test_exclude_modules():
         ]
         mock_source.side_effect = lambda m: Path(f"{m.replace('.', '/')}.py")
         mock_should_include.return_value = True
-        mock_parse.side_effect = lambda name, path: {
+        mock_parse.side_effect = lambda name, path, include_internal: {
             "name": name,
             "docstring": f"Module {name}",
             "functions": [],
@@ -168,7 +168,7 @@ def test_exclude_removes_existing_files(tmp_path):
         mock_find.return_value = ["mypackage", "mypackage.core"]
         mock_source.side_effect = lambda m: Path(f"{m.replace('.', '/')}.py")
         mock_should_include.return_value = True
-        mock_parse.side_effect = lambda name, path: {
+        mock_parse.side_effect = lambda name, path, include_internal: {
             "name": name,
             "docstring": f"Module {name}",
             "functions": [],
@@ -236,7 +236,7 @@ def test_include_internal():
         ]
         mock_source.side_effect = lambda m: Path(f"{m.replace('.', '/')}.py")
         mock_should_include.return_value = True
-        mock_parse.side_effect = lambda name, path: {
+        mock_parse.side_effect = lambda name, path, include_internal: {
             "name": name,
             "docstring": f"Module {name}",
             "functions": [],

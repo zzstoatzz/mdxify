@@ -65,7 +65,7 @@ def extract_function_signature(node: ast.FunctionDef) -> str:
     return signature
 
 
-def parse_module_fast(module_name: str, source_file: Path) -> dict[str, Any]:
+def parse_module_fast(module_name: str, source_file: Path, include_internal: bool = False) -> dict[str, Any]:
     """Parse a module quickly using AST."""
     with open(source_file, "r", encoding="utf-8") as f:
         source = f.read()
@@ -82,7 +82,7 @@ def parse_module_fast(module_name: str, source_file: Path) -> dict[str, Any]:
 
     # Only traverse top-level nodes instead of using ast.walk
     for node in tree.body:
-        if isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
+        if isinstance(node, ast.ClassDef) and (include_internal or not node.name.startswith("_")):
             class_info = {
                 "name": node.name,
                 "docstring": extract_docstring(node),
@@ -92,7 +92,7 @@ def parse_module_fast(module_name: str, source_file: Path) -> dict[str, Any]:
 
             # Extract methods
             for item in node.body:
-                if isinstance(item, ast.FunctionDef) and not item.name.startswith("_"):
+                if isinstance(item, ast.FunctionDef) and (include_internal or not item.name.startswith("_")):
                     method_info = {
                         "name": item.name,
                         "signature": extract_function_signature(item),
@@ -103,7 +103,7 @@ def parse_module_fast(module_name: str, source_file: Path) -> dict[str, Any]:
 
             module_info["classes"].append(class_info)
 
-        elif isinstance(node, ast.FunctionDef) and not node.name.startswith("_"):
+        elif isinstance(node, ast.FunctionDef) and (include_internal or not node.name.startswith("_")):
             # Skip overloaded function definitions
             has_overload = any(
                 isinstance(decorator, ast.Name) and decorator.id == "overload"

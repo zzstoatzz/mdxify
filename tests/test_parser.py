@@ -124,3 +124,49 @@ def test_parse_module_fast(tmp_path):
     assert result["classes"][0]["name"] == "PublicClass"
     assert len(result["classes"][0]["methods"]) == 1
     assert result["classes"][0]["methods"][0]["name"] == "public_method"
+
+def test_parse_module_fast_includes_private_with_include_internal(tmp_path):
+    """Test that private functions and classes are included when include_internal is True."""
+    module_file = tmp_path / "test_module.py"
+    module_file.write_text(dedent('''
+        """Module docstring."""
+        
+        def public_function(x: int) -> int:
+            """A public function."""
+            return x * 2
+            
+        def _private_function():
+            """A private function."""
+            pass
+            
+        class PublicClass:
+            """A public class."""
+            
+            def public_method(self):
+                """A public method."""
+                pass
+                
+            def _private_method(self):
+                """A private method."""
+                pass
+                
+        class _PrivateClass:
+            """A private class."""
+            pass
+    '''))
+
+    result = parse_module_fast("test_module", module_file, include_internal=True)
+    
+    assert result["name"] == "test_module"
+    assert result["docstring"] == "Module docstring."
+    assert len(result["functions"]) == 2
+    assert result["functions"][0]["name"] == "public_function"
+    assert result["functions"][1]["name"] == "_private_function"
+    assert len(result["classes"]) == 2
+    assert result["classes"][0]["name"] == "PublicClass"
+    assert len(result["classes"][0]["methods"]) == 2
+    assert result["classes"][0]["methods"][0]["name"] == "public_method"
+    assert result["classes"][0]["methods"][1]["name"] == "_private_method"
+    assert result["classes"][1]["name"] == "_PrivateClass"
+    assert len(result["classes"][1]["methods"]) == 0
+    
