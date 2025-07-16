@@ -31,6 +31,8 @@ def test_extract_docstring_from_async_function():
             pass
     ''')
     tree = ast.parse(code)
+    func_node = tree.body[0]
+    assert extract_docstring(func_node) == "This is a docstring."
 
 
 def test_extract_docstring_from_class():
