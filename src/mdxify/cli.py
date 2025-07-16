@@ -103,6 +103,12 @@ def main():
         default="main",
         help="Git branch name for source code links (default: main)",
     )
+    parser.add_argument(
+        "--include-internal",
+        action="store_true",
+        default=False,
+        help="Include internal modules in the documentation (default: False)",
+    )
 
     args = parser.parse_args()
 
@@ -181,7 +187,7 @@ def main():
         i, module_name = module_data
         
         # Skip internal modules
-        if not should_include_module(module_name):
+        if not should_include_module(module_name) and not args.include_internal:
             return (
                 f"[{i}/{len(modules_to_process)}] Skipping {module_name} (internal module)",
                 None,
