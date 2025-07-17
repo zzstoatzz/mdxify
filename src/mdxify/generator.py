@@ -155,9 +155,6 @@ def generate_mdx(
                     
                     # Add inherited indicator if this is an inherited method
                     method_name = method["name"]
-                    if method.get("is_inherited"):
-                        inherited_from = method.get("inherited_from", "parent class")
-                        method_name = f"{method_name} *(inherited from {inherited_from})*"
                     
                     method_header = f"#### `{method_name}`"
                     method_header_with_link = add_source_link_to_header(method_header, method_source_link)
