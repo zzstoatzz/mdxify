@@ -23,6 +23,11 @@ def test_extract_docstring():
     func_ast = ast.parse(func_code).body[0]
     assert extract_docstring(func_ast) == "Test docstring."
 
+    # Test async function docstring
+    async_func_code = 'async def test():\n    """Test docstring."""\n    pass'
+    async_func_ast = ast.parse(async_func_code).body[0]
+    assert extract_docstring(async_func_ast) == "Test docstring."
+
     # Test class docstring
     class_code = 'class Test:\n    """Test class docstring."""\n    pass'
     class_ast = ast.parse(class_code).body[0]
@@ -52,6 +57,11 @@ def test_extract_function_signature():
     func_code = "def test(x: int, *args, **kwargs) -> None:\n    pass"
     func_ast = ast.parse(func_code).body[0]
     assert extract_function_signature(func_ast) == "test(x: int, *args, **kwargs) -> None"
+
+    # Function with types and defaults
+    func_code = "def test(x: int = 1, y: str = 'default') -> bool:\n    pass"
+    func_ast = ast.parse(func_code).body[0]
+    assert extract_function_signature(func_ast) == "test(x: int = 1, y: str = 'default') -> bool"
 
     # Async function
     func_code = "async def test(x: int) -> str:\n    pass"
@@ -358,4 +368,5 @@ def test_inheritance_from_private_module(tmp_path):
             assert inherited and inherited[0]["is_inherited"] is True
     finally:
         sys.path.remove(str(tmp_path))
+    
     
