@@ -15,3 +15,6 @@ sandbox/
 
 # Version tracking
 src/mdxify/_version.py
+
+# IDE
+.vscode

@@ -9,7 +9,7 @@ from .navigation import (
     get_all_documented_modules,
     update_docs_json,
 )
-from .parser import extract_docstring, extract_function_signature, parse_module_fast
+from .parser import extract_docstring, extract_function_signature, parse_module_fast, parse_modules_with_inheritance, ClassRegistry
 
 __all__ = [
     "main",
@@ -26,4 +26,6 @@ __all__ = [
     "extract_docstring",
     "extract_function_signature",
     "parse_module_fast",
+    "parse_modules_with_inheritance",
+    "ClassRegistry",
 ]
