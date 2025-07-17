@@ -50,21 +50,25 @@ def test_extract_function_signature():
     # Simple function
     func_code = "def test(x: int, y: str = 'default') -> bool:\n    pass"
     func_ast = ast.parse(func_code).body[0]
+    assert isinstance(func_ast, ast.FunctionDef)
     assert extract_function_signature(func_ast) == "test(x: int, y: str = 'default') -> bool"
 
     # Function with *args and **kwargs
     func_code = "def test(x: int, *args, **kwargs) -> None:\n    pass"
     func_ast = ast.parse(func_code).body[0]
+    assert isinstance(func_ast, ast.FunctionDef)
     assert extract_function_signature(func_ast) == "test(x: int, *args, **kwargs) -> None"
 
     # Function with types and defaults
     func_code = "def test(x: int = 1, y: str = 'default') -> bool:\n    pass"
     func_ast = ast.parse(func_code).body[0]
+    assert isinstance(func_ast, ast.FunctionDef)
     assert extract_function_signature(func_ast) == "test(x: int = 1, y: str = 'default') -> bool"
 
     # Async function
     func_code = "async def test(x: int) -> str:\n    pass"
     func_ast = ast.parse(func_code).body[0]
+    assert isinstance(func_ast, ast.AsyncFunctionDef)
     assert extract_function_signature(func_ast) == "test(x: int) -> str"
 
 
