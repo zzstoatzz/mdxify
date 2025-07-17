@@ -5,11 +5,11 @@ from textwrap import dedent
 from unittest.mock import patch
 
 from mdxify.parser import (
+    ClassRegistry,
     extract_docstring,
     extract_function_signature,
     parse_module_fast,
     parse_modules_with_inheritance,
-    ClassRegistry,
 )
 
 
