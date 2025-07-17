@@ -1,9 +1,8 @@
 """Tests for parser functionality."""
 
-from pathlib import Path
+import sys
 from textwrap import dedent
-
-import pytest
+from unittest.mock import patch
 
 from mdxify.parser import (
     extract_docstring,
@@ -340,22 +339,22 @@ def test_inheritance_from_private_module(tmp_path):
                 pass
     '''))
     # Patch get_module_source_file and find_all_modules
-    import sys
+    
     sys.path.insert(0, str(tmp_path))
-    from unittest.mock import patch
-    from mdxify import parser
+    
     def mock_get_module_source_file(module_name):
         if module_name == "_internal":
             return private_file
         elif module_name == "public_mod":
             return public_file
         return None
+    
     def mock_find_all_modules(root_module):
         return ["_internal", "public_mod"]
     try:
         with patch('mdxify.discovery.get_module_source_file', side_effect=mock_get_module_source_file), \
              patch('mdxify.discovery.find_all_modules', side_effect=mock_find_all_modules):
-            results = parser.parse_modules_with_inheritance(["public_mod"])
+            results = parse_modules_with_inheritance(["public_mod"])
             child = results["public_mod"]["classes"][0]
             method_names = {m["name"] for m in child["methods"]}
             # Should include both the child method and the inherited public method

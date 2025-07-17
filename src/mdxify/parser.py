@@ -3,7 +3,7 @@
 import ast
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 # Pre-compile regex for better performance
 _RAISES_PATTERN = re.compile(r"^(\s*)Raises\s*$", re.MULTILINE)
@@ -65,7 +65,7 @@ def extract_function_signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> 
     return signature
 
 
-def extract_base_classes(node: ast.ClassDef) -> List[str]:
+def extract_base_classes(node: ast.ClassDef) -> list[str]:
     """Extract base class names from a class definition."""
     base_classes = []
     for base in node.bases:
@@ -84,7 +84,7 @@ def extract_base_classes(node: ast.ClassDef) -> List[str]:
     return base_classes
 
 
-def extract_methods_from_class(node: ast.ClassDef, include_internal: bool = False) -> List[Dict[str, Any]]:
+def extract_methods_from_class(node: ast.ClassDef, include_internal: bool = False) -> list[dict[str, Any]]:
     """Extract methods from a class definition."""
     methods = []
     for item in node.body:
@@ -104,10 +104,10 @@ class ClassRegistry:
     """Registry for tracking classes and their inheritance relationships."""
     
     def __init__(self):
-        self.classes: Dict[str, Dict[str, Any]] = {}
-        self.module_classes: Dict[str, List[str]] = {}  # module_name -> list of class names
+        self.classes: dict[str, dict[str, Any]] = {}
+        self.module_classes: dict[str, list[str]] = {}  # module_name -> list of class names
     
-    def add_class(self, module_name: str, class_name: str, class_info: Dict[str, Any]):
+    def add_class(self, module_name: str, class_name: str, class_info: dict[str, Any]):
         """Add a class to the registry."""
         full_name = f"{module_name}.{class_name}"
         self.classes[full_name] = class_info
@@ -115,11 +115,11 @@ class ClassRegistry:
             self.module_classes[module_name] = []
         self.module_classes[module_name].append(class_name)
     
-    def get_class(self, class_name: str) -> Optional[Dict[str, Any]]:
+    def get_class(self, class_name: str) -> dict[str, Any] | None:
         """Get a class by its full name."""
         return self.classes.get(class_name)
     
-    def find_class_in_modules(self, class_name: str, modules: List[str]) -> Optional[str]:
+    def find_class_in_modules(self, class_name: str, modules: list[str]) -> str | None:
         """Find a class by name across a list of modules."""
         for module in modules:
             full_name = f"{module}.{class_name}"
@@ -127,7 +127,7 @@ class ClassRegistry:
                 return full_name
         return None
     
-    def get_inherited_methods(self, class_name: str, include_internal: bool = False) -> List[Dict[str, Any]]:
+    def get_inherited_methods(self, class_name: str, include_internal: bool = False) -> list[dict[str, Any]]:
         """Get inherited methods for a class."""
         if class_name not in self.classes:
             return []
@@ -135,7 +135,7 @@ class ClassRegistry:
         class_info = self.classes[class_name]
         base_classes = class_info.get("base_classes", [])
         inherited_methods = []
-        processed_methods: Set[str] = set()
+        processed_methods: set[str] = set()
         
         # Get all available modules for base class resolution
         available_modules = list(self.module_classes.keys())
@@ -158,7 +158,7 @@ class ClassRegistry:
 
 
 def parse_module_fast(module_name: str, source_file: Path, include_internal: bool = False, 
-                     class_registry: Optional[ClassRegistry] = None) -> dict[str, Any]:
+                     class_registry: ClassRegistry | None = None) -> dict[str, Any]:
     """Parse a module quickly using AST."""
     with open(source_file, "r", encoding="utf-8") as f:
         source = f.read()
@@ -211,7 +211,7 @@ def parse_module_fast(module_name: str, source_file: Path, include_internal: boo
     return module_info
 
 
-def parse_modules_with_inheritance(modules_to_process: List[str], include_internal: bool = False) -> Dict[str, dict[str, Any]]:
+def parse_modules_with_inheritance(modules_to_process: list[str], include_internal: bool = False) -> dict[str, dict[str, Any]]:
     """Parse multiple modules with inheritance support, including parent classes in private modules."""
     from .discovery import get_module_source_file, find_all_modules
 
