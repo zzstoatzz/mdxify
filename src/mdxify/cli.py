@@ -9,7 +9,7 @@ from pathlib import Path
 from .discovery import find_all_modules, get_module_source_file, should_include_module
 from .generator import generate_mdx
 from .navigation import update_docs_json
-from .parser import parse_module_fast
+from .parser import parse_module_fast, parse_modules_with_inheritance
 from .source_links import detect_github_repo_url
 
 
@@ -109,6 +109,12 @@ def main():
         default=False,
         help="Include internal modules in the documentation (default: False)",
     )
+    parser.add_argument(
+        "--include-inheritance",
+        action="store_true",
+        default=False,
+        help="Include inherited methods from parent classes in child class documentation (default: False)",
+    )
 
     args = parser.parse_args()
 
@@ -182,88 +188,131 @@ def main():
 
     start_time = time.time()
 
-    def process_module(module_data):
-        """Process a single module."""
-        i, module_name, include_internal = module_data
-        
-        # Skip internal modules
-        if not should_include_module(module_name, include_internal):
-            return (
-                f"[{i}/{len(modules_to_process)}] Skipping {module_name} (internal module)",
-                None,
-                None,
-                "skipped"
-            )
-
-        source_file = get_module_source_file(module_name)
-        if not source_file:
-            return (
-                f"[{i}/{len(modules_to_process)}] Skipping {module_name} (no source file)",
-                None,
-                None,
-                "skipped"
-            )
-
+    if args.include_inheritance:
+        # Use inheritance-aware parsing
         try:
-            module_start = time.time()
-
-            module_info = parse_module_fast(module_name, source_file, include_internal)
-
-            # Check if this module has submodules
-            has_submodules = any(
-                m.startswith(module_name + ".")
-                and m.count(".") == module_name.count(".") + 1
-                for m in modules_to_process
-            )
-
-            # If it has submodules, save it as __init__
-            if has_submodules:
-                output_file = (
-                    args.output_dir / f"{module_name.replace('.', '-')}-__init__.mdx"
-                )
-            else:
-                output_file = args.output_dir / f"{module_name.replace('.', '-')}.mdx"
-
-            generate_mdx(
-                module_info, 
-                output_file,
-                repo_url=repo_url,
-                branch=args.branch,
-                root_module=args.root_module,
-            )
-
-            module_time = time.time() - module_start
-            return (
-                f"[{i}/{len(modules_to_process)}] Processing {module_name}... done ({module_time:.2f}s)",
-                module_name,
-                None,
-                "success"
-            )
-        except Exception as e:
-            return (
-                f"[{i}/{len(modules_to_process)}] Processing {module_name}... failed: {e}",
-                None,
-                (module_name, str(e)),
-                "failed"
-            )
-
-    # Process modules in parallel
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        # Submit all tasks
-        future_to_module = {
-            executor.submit(process_module, (i, module_name, args.include_internal)): module_name
-            for i, module_name in enumerate(modules_to_process, 1)
-        }
-        
-        # Process results as they complete
-        for future in as_completed(future_to_module):
-            message, success_module, failed_module, status = future.result()
-            print(message)
+            module_results = parse_modules_with_inheritance(modules_to_process, args.include_internal)
             
-            if success_module:
-                generated_modules.append(success_module)
-            if failed_module:
-                failed_modules.append(failed_module)
+            for module_name, module_info in module_results.items():
+                try:
+                    # Check if this module has submodules
+                    has_submodules = any(
+                        m.startswith(module_name + ".")
+                        and m.count(".") == module_name.count(".") + 1
+                        for m in modules_to_process
+                    )
+
+                    # If it has submodules, save it as __init__
+                    if has_submodules:
+                        output_file = (
+                            args.output_dir / f"{module_name.replace('.', '-')}-__init__.mdx"
+                        )
+                    else:
+                        output_file = args.output_dir / f"{module_name.replace('.', '-')}.mdx"
+
+                    generate_mdx(
+                        module_info, 
+                        output_file,
+                        repo_url=repo_url,
+                        branch=args.branch,
+                        root_module=args.root_module,
+                    )
+
+                    generated_modules.append(module_name)
+                    print(f"Processing {module_name}... done (with inheritance)")
+                except Exception as e:
+                    failed_modules.append((module_name, str(e)))
+                    print(f"Processing {module_name}... failed: {e}")
+                    
+        except Exception as e:
+            print(f"Failed to parse modules with inheritance: {e}")
+            # Fall back to regular parsing
+            print("Falling back to regular parsing...")
+            args.include_inheritance = False
+
+    else:
+        def process_module(module_data):
+            """Process a single module."""
+            i, module_name, include_internal = module_data
+            
+            # Skip internal modules
+            if not should_include_module(module_name, include_internal):
+                return (
+                    f"[{i}/{len(modules_to_process)}] Skipping {module_name} (internal module)",
+                    None,
+                    None,
+                    "skipped"
+                )
+
+            source_file = get_module_source_file(module_name)
+            if not source_file:
+                return (
+                    f"[{i}/{len(modules_to_process)}] Skipping {module_name} (no source file)",
+                    None,
+                    None,
+                    "skipped"
+                )
+
+            try:
+                module_start = time.time()
+
+                module_info = parse_module_fast(module_name, source_file, include_internal)
+
+                # Check if this module has submodules
+                has_submodules = any(
+                    m.startswith(module_name + ".")
+                    and m.count(".") == module_name.count(".") + 1
+                    for m in modules_to_process
+                )
+
+                # If it has submodules, save it as __init__
+                if has_submodules:
+                    output_file = (
+                        args.output_dir / f"{module_name.replace('.', '-')}-__init__.mdx"
+                    )
+                else:
+                    output_file = args.output_dir / f"{module_name.replace('.', '-')}.mdx"
+
+                generate_mdx(
+                    module_info, 
+                    output_file,
+                    repo_url=repo_url,
+                    branch=args.branch,
+                    root_module=args.root_module,
+                )
+
+                module_time = time.time() - module_start
+                return (
+                    f"[{i}/{len(modules_to_process)}] Processing {module_name}... done ({module_time:.2f}s)",
+                    module_name,
+                    None,
+                    "success"
+                )
+            except Exception as e:
+                return (
+                    f"[{i}/{len(modules_to_process)}] Processing {module_name}... failed: {e}",
+                    None,
+                    (module_name, str(e)),
+                    "failed"
+                )
+
+        # Process modules in parallel
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            # Submit all tasks
+            future_to_module = {
+                executor.submit(process_module, (i, module_name, args.include_internal)): module_name
+                for i, module_name in enumerate(modules_to_process, 1)
+            }
+            
+            # Process results as they complete
+            for future in as_completed(future_to_module):
+                message, success_module, failed_module, status = future.result()
+                print(message)
+                
+                if success_module:
+                    generated_modules.append(success_module)
+                if failed_module:
+                    failed_modules.append(failed_module)
 
     total_time = time.time() - start_time
 

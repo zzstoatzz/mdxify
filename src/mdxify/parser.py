@@ -3,7 +3,7 @@
 import ast
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List, Optional, Set
 
 # Pre-compile regex for better performance
 _RAISES_PATTERN = re.compile(r"^(\s*)Raises\s*$", re.MULTILINE)
@@ -65,7 +65,100 @@ def extract_function_signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> 
     return signature
 
 
-def parse_module_fast(module_name: str, source_file: Path, include_internal: bool = False) -> dict[str, Any]:
+def extract_base_classes(node: ast.ClassDef) -> List[str]:
+    """Extract base class names from a class definition."""
+    base_classes = []
+    for base in node.bases:
+        if isinstance(base, ast.Name):
+            base_classes.append(base.id)
+        elif isinstance(base, ast.Attribute):
+            # Handle cases like 'module.ClassName'
+            parts = []
+            current = base
+            while isinstance(current, ast.Attribute):
+                parts.insert(0, current.attr)
+                current = current.value
+            if isinstance(current, ast.Name):
+                parts.insert(0, current.id)
+                base_classes.append(".".join(parts))
+    return base_classes
+
+
+def extract_methods_from_class(node: ast.ClassDef, include_internal: bool = False) -> List[Dict[str, Any]]:
+    """Extract methods from a class definition."""
+    methods = []
+    for item in node.body:
+        if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and (include_internal or not item.name.startswith("_")):
+            method_info = {
+                "name": item.name,
+                "signature": extract_function_signature(item),
+                "docstring": extract_docstring(item),
+                "line": item.lineno,
+                "is_inherited": False,
+            }
+            methods.append(method_info)
+    return methods
+
+
+class ClassRegistry:
+    """Registry for tracking classes and their inheritance relationships."""
+    
+    def __init__(self):
+        self.classes: Dict[str, Dict[str, Any]] = {}
+        self.module_classes: Dict[str, List[str]] = {}  # module_name -> list of class names
+    
+    def add_class(self, module_name: str, class_name: str, class_info: Dict[str, Any]):
+        """Add a class to the registry."""
+        full_name = f"{module_name}.{class_name}"
+        self.classes[full_name] = class_info
+        if module_name not in self.module_classes:
+            self.module_classes[module_name] = []
+        self.module_classes[module_name].append(class_name)
+    
+    def get_class(self, class_name: str) -> Optional[Dict[str, Any]]:
+        """Get a class by its full name."""
+        return self.classes.get(class_name)
+    
+    def find_class_in_modules(self, class_name: str, modules: List[str]) -> Optional[str]:
+        """Find a class by name across a list of modules."""
+        for module in modules:
+            full_name = f"{module}.{class_name}"
+            if full_name in self.classes:
+                return full_name
+        return None
+    
+    def get_inherited_methods(self, class_name: str, include_internal: bool = False) -> List[Dict[str, Any]]:
+        """Get inherited methods for a class."""
+        if class_name not in self.classes:
+            return []
+        
+        class_info = self.classes[class_name]
+        base_classes = class_info.get("base_classes", [])
+        inherited_methods = []
+        processed_methods: Set[str] = set()
+        
+        # Get all available modules for base class resolution
+        available_modules = list(self.module_classes.keys())
+        
+        for base_class in base_classes:
+            # Try to find the base class in available modules
+            base_full_name = self.find_class_in_modules(base_class, available_modules)
+            if base_full_name and base_full_name in self.classes:
+                base_methods = self.classes[base_full_name].get("methods", [])
+                for method in base_methods:
+                    if method["name"] not in processed_methods:
+                        # Create a copy of the method info and mark as inherited
+                        inherited_method = method.copy()
+                        inherited_method["is_inherited"] = True
+                        inherited_method["inherited_from"] = base_class
+                        inherited_methods.append(inherited_method)
+                        processed_methods.add(method["name"])
+        
+        return inherited_methods
+
+
+def parse_module_fast(module_name: str, source_file: Path, include_internal: bool = False, 
+                     class_registry: Optional[ClassRegistry] = None) -> dict[str, Any]:
     """Parse a module quickly using AST."""
     with open(source_file, "r", encoding="utf-8") as f:
         source = f.read()
@@ -86,20 +179,17 @@ def parse_module_fast(module_name: str, source_file: Path, include_internal: boo
             class_info = {
                 "name": node.name,
                 "docstring": extract_docstring(node),
-                "methods": [],
+                "methods": extract_methods_from_class(node, include_internal),
                 "line": node.lineno,
+                "base_classes": extract_base_classes(node),
             }
 
-            # Extract methods
-            for item in node.body:
-                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and (include_internal or not item.name.startswith("_")):
-                    method_info = {
-                        "name": item.name,
-                        "signature": extract_function_signature(item),
-                        "docstring": extract_docstring(item),
-                        "line": item.lineno,
-                    }
-                    class_info["methods"].append(method_info)
+            # Add inherited methods if we have a class registry
+            if class_registry:
+                inherited_methods = class_registry.get_inherited_methods(f"{module_name}.{node.name}", include_internal)
+                class_info["methods"].extend(inherited_methods)
+                # Sort methods by name for consistent output
+                class_info["methods"].sort(key=lambda m: m["name"])
 
             module_info["classes"].append(class_info)
 
@@ -119,3 +209,62 @@ def parse_module_fast(module_name: str, source_file: Path, include_internal: boo
                 module_info["functions"].append(func_info)
 
     return module_info
+
+
+def parse_modules_with_inheritance(modules_to_process: List[str], include_internal: bool = False) -> Dict[str, dict[str, Any]]:
+    """Parse multiple modules with inheritance support, including parent classes in private modules."""
+    from .discovery import get_module_source_file, find_all_modules
+
+    # First pass: build class registry from ALL available modules (including private ones)
+    # This ensures we can find parent classes even if they're in private modules
+    class_registry = ClassRegistry()
+
+    # Get the root module from the first module to process
+    root_module = None
+    if modules_to_process:
+        root_module = modules_to_process[0].split(".")[0]
+    # Find all modules under the root (including private ones)
+    all_modules = []
+    if root_module:
+        all_modules = find_all_modules(root_module)
+    # Add the explicitly requested modules in case they're not found by find_all_modules
+    all_modules.extend(modules_to_process)
+    all_modules = sorted(set(all_modules))  # Remove duplicates
+
+    for module_name in all_modules:
+        source_file = get_module_source_file(module_name)
+        if not source_file:
+            continue
+        try:
+            with open(source_file, "r", encoding="utf-8") as f:
+                source = f.read()
+            tree = ast.parse(source)
+            for node in tree.body:
+                if isinstance(node, ast.ClassDef):
+                    # For the registry, we want ALL classes (including private ones)
+                    # but only public methods from them
+                    class_info = {
+                        "name": node.name,
+                        "docstring": extract_docstring(node),
+                        "methods": extract_methods_from_class(node, include_internal=False),  # Always public methods only
+                        "line": node.lineno,
+                        "base_classes": extract_base_classes(node),
+                    }
+                    class_registry.add_class(module_name, node.name, class_info)
+        except Exception:
+            # Skip modules that can't be parsed
+            continue
+
+    # Second pass: parse only the requested modules with inheritance
+    module_results = {}
+    for module_name in modules_to_process:
+        source_file = get_module_source_file(module_name)
+        if source_file:
+            try:
+                module_info = parse_module_fast(module_name, source_file, include_internal, class_registry)
+                module_results[module_name] = module_info
+            except Exception:
+                # Skip modules that can't be parsed
+                continue
+
+    return module_results
