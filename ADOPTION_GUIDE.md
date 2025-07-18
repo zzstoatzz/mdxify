@@ -134,3 +134,19 @@ docs/python-sdk/
 ├── mypackage-models-__init__.mdx
 └── mypackage-models-base.mdx
 ```
+
+## Local Mintlify Development
+
+If you're using Mintlify for documentation, you can preview locally:
+
+```bash
+cd docs && npx mint dev
+```
+
+Add these entries to your `.gitignore` for local Mintlify development:
+```
+# Mintlify local development
+docs/node_modules
+docs/package.json
+docs/package-lock.json
+```
