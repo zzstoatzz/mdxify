@@ -77,7 +77,7 @@ def test_add_source_link_to_header():
         "https://github.com/owner/repo/blob/main/module.py#L42",
     )
     # The link should be inline with GitHub icon
-    expected = '### `function_name` <sup><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank"><Icon icon="github" size="14" /></a></sup>'
+    expected = '### `function_name` <sup><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>'
     assert result == expected
     
     # Test that link is inline
@@ -98,5 +98,5 @@ def test_add_source_link_with_custom_text(monkeypatch):
         "https://github.com/owner/repo/blob/main/module.py#L42",
     )
     # Should still produce the icon, not the custom text
-    expected = '### `function_name` <sup><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank"><Icon icon="github" size="14" /></a></sup>'
+    expected = '### `function_name` <sup><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>'
     assert result == expected
