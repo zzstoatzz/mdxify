@@ -144,16 +144,23 @@ def generate_mdx(
                 for method in cls["methods"]:
                     # Generate source link if possible
                     method_source_link = None
-                    if repo_url and "source_file" in module_info and "line" in method:
-                        method_source_link = generate_source_link(
-                            repo_url,
-                            branch,
-                            Path(module_info["source_file"]),
-                            method["line"],
-                            root_module,
-                        )
+                    if repo_url and "line" in method:
+                        # For inherited methods, use the source file from the method itself
+                        # For regular methods, use the module's source file
+                        source_file = method.get("source_file", module_info.get("source_file"))
+                        if source_file:
+                            method_source_link = generate_source_link(
+                                repo_url,
+                                branch,
+                                Path(source_file),
+                                method["line"],
+                                root_module,
+                            )
                     
-                    method_header = f"#### `{method['name']}`"
+                    # Add inherited indicator if this is an inherited method
+                    method_name = method["name"]
+                    
+                    method_header = f"#### `{method_name}`"
                     method_header_with_link = add_source_link_to_header(method_header, method_source_link)
                     lines.append(method_header_with_link)
                     lines.append("")
