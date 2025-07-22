@@ -3,7 +3,7 @@
 import ast
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 # Pre-compile regex for better performance
 _RAISES_PATTERN = re.compile(r"^(\s*)Raises\s*$", re.MULTILINE)
@@ -106,14 +106,17 @@ class ClassRegistry:
     def __init__(self):
         self.classes: dict[str, dict[str, Any]] = {}
         self.module_classes: dict[str, list[str]] = {}  # module_name -> list of class names
+        self.class_source_files: dict[str, str] = {}  # full_class_name -> source_file
     
-    def add_class(self, module_name: str, class_name: str, class_info: dict[str, Any]):
+    def add_class(self, module_name: str, class_name: str, class_info: dict[str, Any], source_file: Optional[str] = None):
         """Add a class to the registry."""
         full_name = f"{module_name}.{class_name}"
         self.classes[full_name] = class_info
         if module_name not in self.module_classes:
             self.module_classes[module_name] = []
         self.module_classes[module_name].append(class_name)
+        if source_file:
+            self.class_source_files[full_name] = source_file
     
     def get_class(self, class_name: str) -> dict[str, Any] | None:
         """Get a class by its full name."""
@@ -145,12 +148,16 @@ class ClassRegistry:
             base_full_name = self.find_class_in_modules(base_class, available_modules)
             if base_full_name and base_full_name in self.classes:
                 base_methods = self.classes[base_full_name].get("methods", [])
+                base_source_file = self.class_source_files.get(base_full_name)
                 for method in base_methods:
                     if method["name"] not in processed_methods:
                         # Create a copy of the method info and mark as inherited
                         inherited_method = method.copy()
                         inherited_method["is_inherited"] = True
                         inherited_method["inherited_from"] = base_class
+                        # Add source file information from the parent class
+                        if base_source_file:
+                            inherited_method["source_file"] = base_source_file
                         inherited_methods.append(inherited_method)
                         processed_methods.add(method["name"])
         
@@ -251,7 +258,7 @@ def parse_modules_with_inheritance(modules_to_process: list[str], include_intern
                         "line": node.lineno,
                         "base_classes": extract_base_classes(node),
                     }
-                    class_registry.add_class(module_name, node.name, class_info)
+                    class_registry.add_class(module_name, node.name, class_info, str(source_file))
         except Exception:
             # Skip modules that can't be parsed
             continue
@@ -264,7 +271,7 @@ def parse_modules_with_inheritance(modules_to_process: list[str], include_intern
         source_file = get_module_source_file(module_name)
         if source_file:
             try:
-                module_info = parse_module_fast(module_name, source_file, include_internal, class_registry)
+                module_info = parse_module_fast(module_name, Path(source_file), include_internal, class_registry)
                 module_results[module_name] = module_info
             except Exception:
                 # Skip modules that can't be parsed

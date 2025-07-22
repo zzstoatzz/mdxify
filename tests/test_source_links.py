@@ -19,21 +19,21 @@ def test_detect_github_repo_url(monkeypatch):
 
 
 def test_get_relative_path():
-    """Test getting relative paths from source files."""
+    """Test relative path extraction."""
     # Test src layout
-    assert get_relative_path(
-        Path("/home/user/project/src/mypackage/module.py"), "mypackage"
-    ) == Path("src/mypackage/module.py")
+    path = Path("/home/user/project/src/mypackage/module.py")
+    result = get_relative_path(path, "mypackage")
+    assert result == Path("src/mypackage/module.py")
     
     # Test flat layout
-    assert get_relative_path(
-        Path("/home/user/project/mypackage/module.py"), "mypackage"
-    ) == Path("mypackage/module.py")
+    path = Path("/home/user/project/mypackage/module.py")
+    result = get_relative_path(path, "mypackage")
+    assert result == Path("mypackage/module.py")
     
-    # Test nested modules
-    assert get_relative_path(
-        Path("/home/user/project/src/mypackage/submodule/file.py"), "mypackage"
-    ) == Path("src/mypackage/submodule/file.py")
+    # Test no match
+    path = Path("/home/user/project/other/module.py")
+    result = get_relative_path(path, "mypackage")
+    assert result is None
 
 
 def test_generate_source_link():
@@ -100,3 +100,99 @@ def test_add_source_link_with_custom_text(monkeypatch):
     # Should still produce the icon, not the custom text
     expected = '### `function_name` <sup><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank"><Icon icon="github" size="14" /></a></sup>'
     assert result == expected
+
+
+def test_inherited_method_source_links():
+    """Test that inherited methods get source links pointing to their parent class."""
+    from mdxify.parser import parse_modules_with_inheritance
+    from mdxify.generator import generate_mdx
+    from textwrap import dedent
+    import tempfile
+    import os
+    
+    # Create test files with realistic repository structure
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        
+        # Create src/test/ directory structure
+        src_path = tmp_path / "src" / "test"
+        src_path.mkdir(parents=True, exist_ok=True)
+        
+        # Create parent module
+        parent_file = src_path / "parent_module.py"
+        parent_file.write_text(dedent('''
+            """Parent module."""
+            
+            class BaseClass:
+                """A base class with methods."""
+                
+                def base_method(self, x: int) -> int:
+                    """A method from the base class."""
+                    return x * 2
+        '''))
+        
+        # Create child module
+        child_file = src_path / "child_module.py"
+        child_file.write_text(dedent('''
+            """Child module."""
+            
+            from .parent_module import BaseClass
+            
+            class ChildClass(BaseClass):
+                """A child class that inherits from BaseClass."""
+                
+                def child_method(self, value: str) -> str:
+                    """A method specific to the child class."""
+                    return f"Child: {value}"
+        '''))
+        
+        # Mock module discovery
+        import sys
+        sys.path.insert(0, str(src_path))
+        
+        try:
+            from unittest.mock import patch
+            
+            def mock_get_module_source_file(module_name):
+                if module_name == "parent_module":
+                    return parent_file
+                elif module_name == "child_module":
+                    return child_file
+                return None
+            
+            def mock_find_all_modules(root_module):
+                return ["parent_module", "child_module"]
+            
+            with patch('mdxify.discovery.get_module_source_file', side_effect=mock_get_module_source_file), \
+                 patch('mdxify.discovery.find_all_modules', side_effect=mock_find_all_modules):
+                
+                # Parse with inheritance
+                results = parse_modules_with_inheritance(["child_module"])
+                child_result = results["child_module"]
+                
+                # Generate MDX with source links
+                output_file = tmp_path / "test.mdx"
+                
+                generate_mdx(
+                    child_result,
+                    output_file,
+                    repo_url="https://github.com/test/repo",
+                    branch="main",
+                    root_module="test",
+                )
+                
+                # Read the generated MDX
+                mdx_content = output_file.read_text()
+                
+                # Check that the inherited method has a source link
+                # The source link should point to the parent module
+                assert "base_method" in mdx_content
+                assert "parent_module.py" in mdx_content
+                assert "github.com/test/repo" in mdx_content
+                
+                # Check that the child method also has a source link
+                assert "child_method" in mdx_content
+                assert "child_module.py" in mdx_content
+                
+        finally:
+            sys.path.remove(str(src_path))
