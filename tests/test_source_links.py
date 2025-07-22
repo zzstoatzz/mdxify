@@ -104,11 +104,11 @@ def test_add_source_link_with_custom_text(monkeypatch):
 
 def test_inherited_method_source_links():
     """Test that inherited methods get source links pointing to their parent class."""
-    from mdxify.parser import parse_modules_with_inheritance
-    from mdxify.generator import generate_mdx
-    from textwrap import dedent
     import tempfile
-    import os
+    from textwrap import dedent
+
+    from mdxify.generator import generate_mdx
+    from mdxify.parser import parse_modules_with_inheritance
     
     # Create test files with realistic repository structure
     with tempfile.TemporaryDirectory() as tmpdir:
