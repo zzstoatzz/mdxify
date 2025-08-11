@@ -167,8 +167,11 @@ class ClassRegistry:
 def parse_module_fast(module_name: str, source_file: Path, include_internal: bool = False, 
                      class_registry: ClassRegistry | None = None) -> dict[str, Any]:
     """Parse a module quickly using AST."""
-    with open(source_file, "r", encoding="utf-8") as f:
+    with open(source_file, "r", encoding="utf-8", newline="") as f:
         source = f.read()
+    
+    # Normalize line endings to ensure consistent AST line numbers across platforms
+    source = source.replace("\r\n", "\n").replace("\r", "\n")
 
     tree = ast.parse(source)
 
@@ -244,8 +247,10 @@ def parse_modules_with_inheritance(modules_to_process: list[str], include_intern
         if not source_file:
             continue
         try:
-            with open(source_file, "r", encoding="utf-8") as f:
+            with open(source_file, "r", encoding="utf-8", newline="") as f:
                 source = f.read()
+            # Normalize line endings to ensure consistent AST line numbers across platforms
+            source = source.replace("\r\n", "\n").replace("\r", "\n")
             tree = ast.parse(source)
             for node in tree.body:
                 if isinstance(node, ast.ClassDef):
