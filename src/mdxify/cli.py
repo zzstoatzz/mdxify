@@ -1,6 +1,7 @@
 """CLI interface for mdxify."""
 
 import argparse
+import logging
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -115,8 +116,28 @@ def main():
         default=False,
         help="Include inherited methods from parent classes in child class documentation (default: False)",
     )
+    parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        default=False,
+        help="Show verbose output including parsing warnings (default: False)",
+    )
 
     args = parser.parse_args()
+
+    # Configure logging based on verbosity
+    if args.verbose:
+        # Show all warnings when verbose
+        logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
+    else:
+        # Suppress griffe warnings by default
+        logging.getLogger('griffe').setLevel(logging.ERROR)
+        # Also suppress other noisy loggers
+        logging.getLogger('griffe.agents.visitor').setLevel(logging.ERROR)
+        logging.getLogger('griffe.agents.inspector').setLevel(logging.ERROR)
+        logging.getLogger('griffe.docstrings').setLevel(logging.ERROR)
+        # Keep root logger at WARNING for important messages
+        logging.basicConfig(level=logging.WARNING, format='%(message)s')
 
     # Validate arguments
     if args.all and not args.root_module:
@@ -127,9 +148,13 @@ def main():
 
     if args.all:
         # Generate all modules under root
-        print(f"Finding all {args.root_module} modules...")
+        if args.verbose:
+            print(f"Finding all {args.root_module} modules...")
         modules_to_process = find_all_modules(args.root_module)
-        print(f"Found {len(modules_to_process)} modules")
+        if args.verbose:
+            print(f"Found {len(modules_to_process)} modules")
+        else:
+            print(f"Found {len(modules_to_process)} {args.root_module} modules")
     elif not args.modules:
         parser.error("Either specify modules to document or use --all with --root-module")
     else:
@@ -166,7 +191,7 @@ def main():
         for pattern in unmatched_patterns:
             print(f"Warning: --exclude pattern '{pattern}' did not match any modules")
         
-        if excluded_count > 0:
+        if excluded_count > 0 and args.verbose:
             print(f"Excluding {excluded_count} modules based on --exclude patterns")
         modules_to_process = filtered_modules
         
@@ -179,7 +204,7 @@ def main():
     repo_url = args.repo_url
     if not repo_url:
         repo_url = detect_github_repo_url()
-        if repo_url:
+        if repo_url and args.verbose:
             print(f"Detected repository: {repo_url}")
     
     # Generate documentation
@@ -219,10 +244,14 @@ def main():
                     )
 
                     generated_modules.append(module_name)
-                    print(f"Processing {module_name}... done (with inheritance)")
+                    if args.verbose:
+                        print(f"Processing {module_name}... done (with inheritance)")
                 except Exception as e:
                     failed_modules.append((module_name, str(e)))
-                    print(f"Processing {module_name}... failed: {e}")
+                    if args.verbose:
+                        print(f"Processing {module_name}... failed: {e}")
+                    else:
+                        print(f"✗ {module_name}")
                     
         except Exception as e:
             print(f"Failed to parse modules with inheritance: {e}")
@@ -233,25 +262,17 @@ def main():
     else:
         def process_module(module_data):
             """Process a single module."""
-            i, module_name, include_internal = module_data
+            i, module_name, include_internal, verbose = module_data
             
             # Skip internal modules
             if not should_include_module(module_name, include_internal):
-                return (
-                    f"[{i}/{len(modules_to_process)}] Skipping {module_name} (internal module)",
-                    None,
-                    None,
-                    "skipped"
-                )
+                msg = f"[{i}/{len(modules_to_process)}] Skipping {module_name} (internal module)" if verbose else None
+                return (msg, None, None, "skipped")
 
             source_file = get_module_source_file(module_name)
             if not source_file:
-                return (
-                    f"[{i}/{len(modules_to_process)}] Skipping {module_name} (no source file)",
-                    None,
-                    None,
-                    "skipped"
-                )
+                msg = f"[{i}/{len(modules_to_process)}] Skipping {module_name} (no source file)" if verbose else None
+                return (msg, None, None, "skipped")
 
             try:
                 module_start = time.time()
@@ -282,32 +303,31 @@ def main():
                 )
 
                 module_time = time.time() - module_start
-                return (
-                    f"[{i}/{len(modules_to_process)}] Processing {module_name}... done ({module_time:.2f}s)",
-                    module_name,
-                    None,
-                    "success"
-                )
+                if verbose:
+                    msg = f"[{i}/{len(modules_to_process)}] Processing {module_name}... done ({module_time:.2f}s)"
+                else:
+                    msg = f"Processing {module_name}... done"
+                return (msg, module_name, None, "success")
             except Exception as e:
-                return (
-                    f"[{i}/{len(modules_to_process)}] Processing {module_name}... failed: {e}",
-                    None,
-                    (module_name, str(e)),
-                    "failed"
-                )
+                if verbose:
+                    msg = f"[{i}/{len(modules_to_process)}] Processing {module_name}... failed: {e}"
+                else:
+                    msg = f"✗ {module_name}"
+                return (msg, None, (module_name, str(e)), "failed")
 
         # Process modules in parallel
         with ThreadPoolExecutor(max_workers=8) as executor:
             # Submit all tasks
             future_to_module = {
-                executor.submit(process_module, (i, module_name, args.include_internal)): module_name
+                executor.submit(process_module, (i, module_name, args.include_internal, args.verbose)): module_name
                 for i, module_name in enumerate(modules_to_process, 1)
             }
             
             # Process results as they complete
             for future in as_completed(future_to_module):
                 message, success_module, failed_module, status = future.result()
-                print(message)
+                if message:
+                    print(message)
                 
                 if success_module:
                     generated_modules.append(success_module)
@@ -320,7 +340,8 @@ def main():
     if args.update_nav and generated_modules:
         docs_json_path = Path("docs/docs.json")
         if docs_json_path.exists():
-            print("\nUpdating docs.json navigation...")
+            if args.verbose:
+                print("\nUpdating docs.json navigation...")
             # Only do complete regeneration when --all is used
             regenerate_all = args.all or (not args.modules)
             success = update_docs_json(
@@ -332,19 +353,29 @@ def main():
                 anchor_name=args.navigation_key
             )
             if success:
-                print("Navigation updated successfully")
+                if args.verbose:
+                    print("Navigation updated successfully")
+                else:
+                    print(f"\nUpdated docs.json - {len(generated_modules)} entries")
             else:
                 print("Failed to update navigation")
         else:
             print(f"\nWarning: Could not find {docs_json_path}")
 
     # Summary
-    print("\nGeneration complete!")
-    print(f"  Total time: {total_time:.2f}s")
-    print(f"  Generated: {len(generated_modules)} modules")
-    print(f"  Failed: {len(failed_modules)} modules")
-    if modules_to_process:
-        print(f"  Average time per module: {total_time / len(modules_to_process):.3f}s")
+    if not args.verbose:
+        # Concise summary
+        print(f"\n✓ Generated {len(generated_modules)} modules in {total_time:.1f}s")
+        if failed_modules:
+            print(f"✗ Failed: {len(failed_modules)} modules")
+    else:
+        # Verbose summary
+        print("\nGeneration complete!")
+        print(f"  Total time: {total_time:.2f}s")
+        print(f"  Generated: {len(generated_modules)} modules")
+        print(f"  Failed: {len(failed_modules)} modules")
+        if modules_to_process:
+            print(f"  Average time per module: {total_time / len(modules_to_process):.3f}s")
 
     if failed_modules:
         print("\nFailed modules:")
