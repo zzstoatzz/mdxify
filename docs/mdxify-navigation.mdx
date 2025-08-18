@@ -1,0 +1,103 @@
+---
+title: navigation
+sidebarTitle: navigation
+---
+
+# `mdxify.navigation`
+
+
+Navigation structure management.
+
+## Functions
+
+### `get_all_documented_modules` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/navigation.py#L11" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+get_all_documented_modules(output_dir: Path) -> list[str]
+```
+
+
+Get all modules that have documentation files.
+
+
+### `build_hierarchical_navigation` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/navigation.py#L29" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+build_hierarchical_navigation(generated_modules: list[str], output_dir: Path, docs_root: Path | None = None, skip_empty_parents: bool = False) -> list[dict[str, Any]]
+```
+
+
+Build a hierarchical navigation structure from flat module names.
+
+**Args:**
+- `generated_modules`: List of module names
+- `output_dir`: Directory where MDX files are written
+- `docs_root`: Root directory for docs (to calculate relative paths). If None, paths are relative to output_dir
+- `skip_empty_parents`: Whether to skip empty parent modules
+
+Returns a list of navigation entries where each entry is either:
+- A string (the path to the MDX file without extension)
+- A dict with "group" and "pages" keys for modules with submodules
+
+
+### `find_mdxify_placeholder` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/navigation.py#L174" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+find_mdxify_placeholder(obj: Any, path: list[str] | None = None) -> tuple[Any, list[str]] | None
+```
+
+
+Recursively find the $mdxify placeholder in a nested structure.
+
+Returns the parent container and path to the placeholder, or None if not found.
+
+
+### `find_mdxify_anchor_or_group` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/navigation.py#L206" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+find_mdxify_anchor_or_group(docs_config: dict[str, Any], target_name: str) -> tuple[Any, list[str]] | None
+```
+
+
+Find an existing mdxify-managed anchor or group in the navigation.
+
+Returns the pages list and path to it, or None if not found.
+
+
+### `find_mdxify_anchor` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/navigation.py#L266" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+find_mdxify_anchor(docs_config: dict[str, Any], anchor_name: str) -> tuple[Any, list[str]] | None
+```
+
+
+Find an existing mdxify-managed anchor in the navigation.
+
+This function is kept for backwards compatibility but now searches for both anchors and groups.
+
+Returns the pages list and path to it, or None if not found.
+
+
+### `update_docs_json` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/navigation.py#L276" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+update_docs_json(docs_json_path: Path, generated_modules: list[str], output_dir: Path, regenerate_all: bool = False, skip_empty_parents: bool = False, anchor_name: str = 'SDK Reference') -> bool
+```
+
+
+Update docs.json with generated module documentation.
+
+First looks for an existing anchor or group with the given name to update.
+If not found, looks for {"$mdxify": "generated"} placeholder.
+
+**Args:**
+- `docs_json_path`: Path to docs.json file
+- `generated_modules`: List of module names that were generated
+- `output_dir`: Directory where MDX files are written
+- `regenerate_all`: If True, replace all content; if False, merge with existing
+- `skip_empty_parents`: Whether to skip empty parent modules
+- `anchor_name`: Name of the navigation anchor or group to update (searches both)
+Note\: Despite the parameter name, this searches for both anchors and groups.
+
+Returns True if successfully updated, False otherwise.
+

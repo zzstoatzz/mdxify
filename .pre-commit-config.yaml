@@ -15,3 +15,9 @@ repos:
         types: [python]
         pass_filenames: false
         require_serial: true
+      - id: generate-docs
+        name: Generate mdxify documentation
+        entry: uv run mdxify --all --root-module mdxify --output-dir docs
+        language: system
+        pass_filenames: false
+        always_run: true

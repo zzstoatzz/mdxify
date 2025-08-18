@@ -352,12 +352,7 @@ def main():
                 skip_empty_parents=args.skip_empty_parents,
                 anchor_name=args.navigation_key
             )
-            if success:
-                if args.verbose:
-                    print("Navigation updated successfully")
-                else:
-                    print(f"\nUpdated docs.json - {len(generated_modules)} entries")
-            else:
+            if not success:
                 print("Failed to update navigation")
         else:
             print(f"\nWarning: Could not find {docs_json_path}")

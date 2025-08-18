@@ -382,13 +382,17 @@ To use automatic navigation updates, either:
 
     # Check if content has actually changed before writing
     # This prevents triggering pre-commit hooks when content is identical
-    new_content = json.dumps(docs_config, indent=2) + "\n"
+    
+    # Use sort_keys=True for consistent JSON serialization
+    new_content = json.dumps(docs_config, indent=2, sort_keys=True) + "\n"
     
     # Read existing content for comparison
+    # Re-parse and re-serialize to ensure consistent format for comparison
     try:
         with open(docs_json_path, "r") as f:
-            existing_content = f.read()
-    except FileNotFoundError:
+            existing_data = json.load(f)
+        existing_content = json.dumps(existing_data, indent=2, sort_keys=True) + "\n"
+    except (FileNotFoundError, json.JSONDecodeError):
         existing_content = ""
     
     # Only write if content has changed
