@@ -67,7 +67,15 @@ def generate_mdx(
         )
         lines.append("")
         output_file.parent.mkdir(parents=True, exist_ok=True)
-        output_file.write_text("\n".join(lines))
+        new_content = "\n".join(lines)
+        
+        # Only write if content has changed
+        if output_file.exists():
+            existing_content = output_file.read_text()
+            if existing_content == new_content:
+                return  # No changes needed
+        
+        output_file.write_text(new_content)
         return
 
     if module_info["docstring"]:
@@ -177,4 +185,13 @@ def generate_mdx(
                         lines.append("")
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
-    output_file.write_text("\n".join(lines))
+    new_content = "\n".join(lines)
+    
+    # Only write if content has changed
+    # This prevents triggering pre-commit hooks when regenerating identical docs
+    if output_file.exists():
+        existing_content = output_file.read_text()
+        if existing_content == new_content:
+            return  # No changes needed
+    
+    output_file.write_text(new_content)

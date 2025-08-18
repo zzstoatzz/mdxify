@@ -380,10 +380,26 @@ To use automatic navigation updates, either:
         print("Warning: Unexpected placeholder location")
         return False
 
-    # Write back to docs.json
-    with open(docs_json_path, "w") as f:
-        json.dump(docs_config, f, indent=2)
-        f.write("\n")  # Add trailing newline
-        
-    print(f"Updated {docs_json_path} - replaced placeholder with {len(navigation_pages)} entries")
+    # Check if content has actually changed before writing
+    # This prevents triggering pre-commit hooks when content is identical
+    new_content = json.dumps(docs_config, indent=2) + "\n"
+    
+    # Read existing content for comparison
+    try:
+        with open(docs_json_path, "r") as f:
+            existing_content = f.read()
+    except FileNotFoundError:
+        existing_content = ""
+    
+    # Only write if content has changed
+    if new_content != existing_content:
+        with open(docs_json_path, "w") as f:
+            f.write(new_content)
+        if isinstance(container_info, tuple) and container_info[1] is not None:
+            print(f"Updated {docs_json_path} - replaced placeholder with {len(navigation_pages)} entries")
+        else:
+            print(f"Updated {docs_json_path} - {len(navigation_pages)} entries")
+    else:
+        print(f"No changes needed for {docs_json_path} - {len(navigation_pages)} entries already up to date")
+    
     return True
