@@ -2,6 +2,13 @@
 
 Generate MDX API documentation from Python modules with automatic navigation structure.
 
+## Projects Using mdxify
+
+mdxify is powering the API documentation for the following projects:
+
+- **[FastMCP](https://github.com/jlowin/fastmcp)** by Jeremiah Lowin - See it in action at [gofastmcp.com](https://gofastmcp.com/python-sdk)
+- **[Prefect](https://github.com/PrefectHQ/prefect)** - See the API reference at [docs.prefect.io](https://docs.prefect.io/v3/api-ref/python)
+
 ## Installation
 
 ```bash
