@@ -7,6 +7,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+from ._version import __version__
 from .discovery import find_all_modules, get_module_source_file, should_include_module
 from .generator import generate_mdx
 from .navigation import update_docs_json
@@ -44,6 +45,11 @@ def remove_excluded_files(output_dir: Path, exclude_patterns: list[str]) -> int:
 def main():
     parser = argparse.ArgumentParser(
         description="Generate API reference documentation for Python modules"
+    )
+    parser.add_argument(
+        "--version", "-V",
+        action="version",
+        version=f"mdxify {__version__}"
     )
     parser.add_argument(
         "modules",
