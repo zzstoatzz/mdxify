@@ -7,7 +7,27 @@ from unittest.mock import patch
 
 import pytest
 
+from mdxify._version import __version__
 from mdxify.cli import main, remove_excluded_files
+
+
+def test_version_flag(capsys):
+    """Test that --version and -V flags show the version."""
+    # Test --version
+    with patch.object(sys, "argv", ["mdxify", "--version"]):
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 0  # type: ignore
+        captured = capsys.readouterr()
+        assert f"mdxify {__version__}" in captured.out
+    
+    # Test -V
+    with patch.object(sys, "argv", ["mdxify", "-V"]):
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 0  # type: ignore
+        captured = capsys.readouterr()
+        assert f"mdxify {__version__}" in captured.out
 
 
 def test_default_output_dir_is_python_sdk():
