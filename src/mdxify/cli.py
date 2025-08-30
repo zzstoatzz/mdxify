@@ -213,6 +213,43 @@ def main():
         if repo_url and args.verbose:
             print(f"Detected repository: {repo_url}")
     
+    # Clean up existing MDX files when using --all (declarative behavior)
+    if args.all and args.output_dir.exists():
+        existing_files = list(args.output_dir.glob("*.mdx"))
+        # Build a set of expected filenames for current modules
+        expected_files = set()
+        for module_name in modules_to_process:
+            # Check if this module has submodules
+            has_submodules = any(
+                m.startswith(module_name + ".")
+                and m.count(".") == module_name.count(".") + 1
+                for m in modules_to_process
+            )
+            if has_submodules:
+                filename = f"{module_name.replace('.', '-')}-__init__.mdx"
+            else:
+                filename = f"{module_name.replace('.', '-')}.mdx"
+            expected_files.add(filename)
+        
+        # Remove files that shouldn't exist anymore
+        removed_count = 0
+        for mdx_file in existing_files:
+            if mdx_file.name not in expected_files:
+                # Only remove files that match the root module pattern
+                stem = mdx_file.stem
+                if stem.endswith("-__init__"):
+                    module_name = stem[:-9].replace("-", ".")
+                else:
+                    module_name = stem.replace("-", ".")
+                
+                # Check if this file belongs to the root module we're regenerating
+                if args.root_module and module_name.startswith(args.root_module):
+                    mdx_file.unlink()
+                    removed_count += 1
+        
+        if removed_count > 0:
+            print(f"Removed {removed_count} stale MDX files")
+    
     # Generate documentation
     generated_modules = []
     failed_modules = []
