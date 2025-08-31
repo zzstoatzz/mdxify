@@ -52,9 +52,9 @@ class SimpleProgressBar:
         # Format time
         def fmt_time(seconds):
             if seconds < 60:
-                return f"{seconds:.1f}s"
+                return f"{seconds:.3f}s"
             else:
-                return f"{seconds/60:.1f}m"
+                return f"{seconds/60:.3f}m"
         
         # Build output line
         line = f"\r{self.desc}: [{bar}] {self.current}/{self.total} ({pct:.0f}%) | {fmt_time(elapsed)} elapsed"
@@ -316,6 +316,8 @@ def main():
     # Generate documentation
     generated_modules = []
     failed_modules = []
+    updated_count = 0
+    created_count = 0
 
     start_time = time.time()
 
@@ -373,12 +375,12 @@ def main():
             # Skip internal modules
             if not should_include_module(module_name, include_internal):
                 msg = f"[{i}/{len(modules_to_process)}] Skipping {module_name} (internal module)" if verbose else None
-                return (msg, None, None, "skipped")
+                return (msg, None, None, "skipped", False)
 
             source_file = get_module_source_file(module_name)
             if not source_file:
                 msg = f"[{i}/{len(modules_to_process)}] Skipping {module_name} (no source file)" if verbose else None
-                return (msg, None, None, "skipped")
+                return (msg, None, None, "skipped", False)
 
             try:
                 module_start = time.time()
@@ -400,6 +402,7 @@ def main():
                 else:
                     output_file = args.output_dir / f"{module_name.replace('.', '-')}.mdx"
 
+                file_existed = output_file.exists()
                 generate_mdx(
                     module_info, 
                     output_file,
@@ -410,16 +413,16 @@ def main():
 
                 module_time = time.time() - module_start
                 if verbose:
-                    msg = f"[{i}/{len(modules_to_process)}] Processing {module_name}... done ({module_time:.2f}s)"
+                    msg = f"[{i}/{len(modules_to_process)}] Processing {module_name}... done ({module_time:.3f}s)"
                 else:
                     msg = f"Processing {module_name}... done"
-                return (msg, module_name, None, "success")
+                return (msg, module_name, None, "success", file_existed)
             except Exception as e:
                 if verbose:
                     msg = f"[{i}/{len(modules_to_process)}] Processing {module_name}... failed: {e}"
                 else:
                     msg = f"✗ {module_name}"
-                return (msg, None, (module_name, str(e)), "failed")
+                return (msg, None, (module_name, str(e)), "failed", False)
 
         # Process modules in parallel
         with ThreadPoolExecutor(max_workers=8) as executor:
@@ -429,15 +432,39 @@ def main():
                 for i, module_name in enumerate(modules_to_process, 1)
             }
             
+            # Count existing files to determine the action
+            existing_files = 0
+            if args.output_dir.exists():
+                for module_name in modules_to_process:
+                    has_submodules = any(
+                        m.startswith(module_name + ".")
+                        and m.count(".") == module_name.count(".") + 1
+                        for m in modules_to_process
+                    )
+                    if has_submodules:
+                        output_file = args.output_dir / f"{module_name.replace('.', '-')}-__init__.mdx"
+                    else:
+                        output_file = args.output_dir / f"{module_name.replace('.', '-')}.mdx"
+                    if output_file.exists():
+                        existing_files += 1
+            
+            # Choose description based on whether we're updating or creating
+            if existing_files == len(modules_to_process):
+                desc = "Updating docs"
+            elif existing_files > 0:
+                desc = "Processing docs"
+            else:
+                desc = "Generating docs"
+            
             # Create progress bar if not in verbose mode
             progress_bar = None if args.verbose else SimpleProgressBar(
                 total=len(modules_to_process),
-                desc="Generating docs"
+                desc=desc
             )
             
             # Process results as they complete
             for future in as_completed(future_to_module):
-                message, success_module, failed_module, status = future.result()
+                message, success_module, failed_module, status, file_existed = future.result()
                 
                 if args.verbose:
                     if message:
@@ -449,6 +476,10 @@ def main():
                 
                 if success_module:
                     generated_modules.append(success_module)
+                    if file_existed:
+                        updated_count += 1
+                    else:
+                        created_count += 1
                 if failed_module:
                     failed_modules.append(failed_module)
             
@@ -482,13 +513,18 @@ def main():
     # Summary
     if not args.verbose:
         # Concise summary
-        print(f"\n✓ Generated {len(generated_modules)} modules in {total_time:.1f}s")
+        if created_count == 0 and updated_count > 0:
+            print(f"\n✓ Updated {updated_count} modules in {total_time:.3f}s")
+        elif created_count > 0 and updated_count > 0:
+            print(f"\n✓ Created {created_count} and updated {updated_count} modules in {total_time:.3f}s")
+        else:
+            print(f"\n✓ Generated {len(generated_modules)} modules in {total_time:.3f}s")
         if failed_modules:
             print(f"✗ Failed: {len(failed_modules)} modules")
     else:
         # Verbose summary
         print("\nGeneration complete!")
-        print(f"  Total time: {total_time:.2f}s")
+        print(f"  Total time: {total_time:.3f}s")
         print(f"  Generated: {len(generated_modules)} modules")
         print(f"  Failed: {len(failed_modules)} modules")
         if modules_to_process:
