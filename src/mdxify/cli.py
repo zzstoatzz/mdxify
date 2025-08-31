@@ -6,6 +6,7 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from threading import Lock
 
 from ._version import __version__
 from .discovery import find_all_modules, get_module_source_file, should_include_module
@@ -13,6 +14,68 @@ from .generator import generate_mdx
 from .navigation import update_docs_json
 from .parser import parse_module_fast, parse_modules_with_inheritance
 from .source_links import detect_github_repo_url
+
+
+class SimpleProgressBar:
+    """A simple progress bar using only built-in Python."""
+    
+    def __init__(self, total: int, desc: str = "Processing"):
+        self.total = total
+        self.current = 0
+        self.desc = desc
+        self.start_time = time.time()
+        self.lock = Lock()
+        self._last_line_length = 0
+        
+    def update(self, n: int = 1):
+        """Update progress by n steps."""
+        with self.lock:
+            self.current += n
+            self._render()
+    
+    def _render(self):
+        """Render the progress bar to stdout."""
+        if self.total == 0:
+            return
+            
+        # Calculate metrics
+        pct = (self.current / self.total) * 100
+        elapsed = time.time() - self.start_time
+        rate = self.current / elapsed if elapsed > 0 else 0
+        eta = (self.total - self.current) / rate if rate > 0 else 0
+        
+        # Build progress bar
+        bar_width = 30
+        filled = int(bar_width * self.current / self.total)
+        bar = "█" * filled + "░" * (bar_width - filled)
+        
+        # Format time
+        def fmt_time(seconds):
+            if seconds < 60:
+                return f"{seconds:.1f}s"
+            else:
+                return f"{seconds/60:.1f}m"
+        
+        # Build output line
+        line = f"\r{self.desc}: [{bar}] {self.current}/{self.total} ({pct:.0f}%) | {fmt_time(elapsed)} elapsed"
+        if self.current < self.total:
+            line += f" | ~{fmt_time(eta)} remaining"
+        
+        # Clear previous line if it was longer
+        if len(line) < self._last_line_length:
+            line += " " * (self._last_line_length - len(line))
+        self._last_line_length = len(line)
+        
+        # Write to stdout
+        sys.stdout.write(line)
+        sys.stdout.flush()
+    
+    def finish(self):
+        """Mark progress as complete."""
+        with self.lock:
+            self.current = self.total
+            self._render()
+            print()  # New line after progress bar
 
 
 def remove_excluded_files(output_dir: Path, exclude_patterns: list[str]) -> int:
@@ -366,16 +429,32 @@ def main():
                 for i, module_name in enumerate(modules_to_process, 1)
             }
             
+            # Create progress bar if not in verbose mode
+            progress_bar = None if args.verbose else SimpleProgressBar(
+                total=len(modules_to_process),
+                desc="Generating docs"
+            )
+            
             # Process results as they complete
             for future in as_completed(future_to_module):
                 message, success_module, failed_module, status = future.result()
-                if message:
-                    print(message)
+                
+                if args.verbose:
+                    if message:
+                        print(message)
+                else:
+                    # Update progress bar
+                    if progress_bar:
+                        progress_bar.update()
                 
                 if success_module:
                     generated_modules.append(success_module)
                 if failed_module:
                     failed_modules.append(failed_module)
+            
+            # Finish progress bar
+            if progress_bar:
+                progress_bar.finish()
 
     total_time = time.time() - start_time
 

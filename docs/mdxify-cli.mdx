@@ -10,7 +10,7 @@ CLI interface for mdxify.
 
 ## Functions
 
-### `remove_excluded_files` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/cli.py#L18" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `remove_excluded_files` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/cli.py#L81" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 remove_excluded_files(output_dir: Path, exclude_patterns: list[str]) -> int
@@ -22,8 +22,36 @@ Remove existing MDX files for excluded modules.
 Returns the number of files removed.
 
 
-### `main` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/cli.py#L45" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `main` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/cli.py#L108" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 main()
 ```
+
+## Classes
+
+### `SimpleProgressBar` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/cli.py#L19" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+
+A simple progress bar using only built-in Python.
+
+
+**Methods:**
+
+#### `update` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/cli.py#L30" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+update(self, n: int = 1)
+```
+
+Update progress by n steps.
+
+
+#### `finish` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/cli.py#L73" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+finish(self)
+```
+
+Mark progress as complete.
+

@@ -90,3 +90,8 @@ source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
 version-file = "src/mdxify/_version.py"
+
+[tool.uv.workspace]
+members = [
+    "sandbox/rename-test",
+]
