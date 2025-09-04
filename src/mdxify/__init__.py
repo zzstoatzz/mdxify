@@ -1,5 +1,6 @@
 """mdxify - Generate MDX API documentation from Python modules."""
 
+from .api import generate_docs
 from .cli import main
 from .discovery import find_all_modules, get_module_source_file, should_include_module
 from .formatter import escape_mdx_content, format_docstring_with_griffe
@@ -12,6 +13,7 @@ from .navigation import (
 from .parser import extract_docstring, extract_function_signature, parse_module_fast, parse_modules_with_inheritance, ClassRegistry
 
 __all__ = [
+    "generate_docs",
     "main",
     "find_all_modules",
     "get_module_source_file",

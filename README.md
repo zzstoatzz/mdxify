@@ -17,6 +17,8 @@ pip install mdxify
 
 ## Usage
 
+### CLI Usage
+
 Generate documentation for all modules in a package:
 
 ```bash
@@ -34,6 +36,24 @@ Exclude internal modules from documentation:
 ```bash
 mdxify --all --root-module mypackage --exclude mypackage.internal --exclude mypackage.tests
 ```
+
+### Programmatic API (Recommended for CI/CD)
+
+For best performance in automated workflows:
+
+```python
+from mdxify import generate_docs
+
+result = generate_docs(
+    "mypackage",
+    output_dir="docs/python-sdk",
+    exclude=["mypackage.internal", "mypackage.tests"],
+)
+
+print(f"Generated {result['modules_processed']} modules in {result['time_elapsed']:.3f}s")
+```
+
+See [PERFORMANCE.md](PERFORMANCE.md) for detailed performance optimization tips.
 
 ### Options
 

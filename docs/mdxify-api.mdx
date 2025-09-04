@@ -1,0 +1,48 @@
+---
+title: api
+sidebarTitle: api
+---
+
+# `mdxify.api`
+
+
+Programmatic API for mdxify.
+
+This module provides a Python API for generating MDX documentation without CLI overhead.
+This is the recommended approach for CI/CD and pre-commit scenarios where performance matters.
+
+
+## Functions
+
+### `generate_docs` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/api.py#L10" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+
+```python
+generate_docs(root_module: str, output_dir: str | Path = 'docs/python-sdk') -> dict
+```
+
+
+Generate MDX documentation for a Python package.
+
+This is the programmatic API for mdxify, designed for optimal performance
+when called from Python scripts (e.g., in CI/CD pipelines).
+
+**Args:**
+- `root_module`: The root module to document (e.g., 'prefect')
+- `output_dir`: Output directory for MDX files
+- `exclude`: List of module patterns to exclude
+- `anchor_name`: Navigation anchor name in docs.json
+- `repo_url`: GitHub repository URL for source links
+- `branch`: Git branch for source links
+- `include_internal`: Include internal/private modules
+- `include_inheritance`: Include inherited methods in docs
+- `skip_empty_parents`: Skip parent modules with only boilerplate
+- `verbose`: Enable verbose output
+
+**Returns:**
+- Dictionary with generation statistics:
+- - modules_processed: Number of modules processed
+- - modules_failed: Number of modules that failed
+- - time_elapsed: Total time in seconds
+- - files_created: Number of new files created
+- - files_updated: Number of existing files updated
+
