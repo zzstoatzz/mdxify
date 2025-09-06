@@ -3,8 +3,9 @@
 from pathlib import Path
 from typing import Any, Optional
 
-from .formatter import escape_mdx_content, format_docstring_with_griffe
-from .source_links import add_source_link_to_header, generate_source_link
+from .formatter import format_docstring_with_griffe
+from .renderers import MDXRenderer, Renderer
+from .source_links import generate_source_link
 
 
 def is_module_empty(module_path: Path) -> bool:
@@ -25,6 +26,7 @@ def generate_mdx(
     repo_url: Optional[str] = None,
     branch: str = "main",
     root_module: Optional[str] = None,
+    renderer: Optional[Renderer] = None,
 ) -> None:
     """Generate MDX documentation from module info.
     
@@ -35,20 +37,18 @@ def generate_mdx(
         branch: Git branch name for source links
         root_module: Root module name for finding relative paths
     """
-    lines = []
+    if renderer is None:
+        renderer = MDXRenderer()
+
+    lines: list[str] = []
 
     # Frontmatter
-    lines.append("---")
-    # If this is an __init__ file, use __init__ as the title
+    # Frontmatter
     if output_file.stem.endswith("-__init__"):
-        lines.append("title: __init__")
-        lines.append("sidebarTitle: __init__")
+        lines.extend(renderer.frontmatter("__init__", "__init__"))
     else:
         module_name = module_info["name"].split(".")[-1]
-        lines.append(f"title: {module_name}")
-        lines.append(f"sidebarTitle: {module_name}")
-    lines.append("---")
-    lines.append("")
+        lines.extend(renderer.frontmatter(module_name, module_name))
 
     # Module header
     lines.append(f"# `{module_info['name']}`")
@@ -80,7 +80,7 @@ def generate_mdx(
 
     if module_info["docstring"]:
         lines.append("")
-        lines.append(escape_mdx_content(module_info["docstring"]))
+        lines.append(renderer.escape(module_info["docstring"]))
         lines.append("")
 
     # Functions
@@ -101,7 +101,7 @@ def generate_mdx(
                 )
             
             header = f"### `{func['name']}`"
-            header_with_link = add_source_link_to_header(header, source_link)
+            header_with_link = renderer.header_with_source(header, source_link)
             lines.append(header_with_link)
             lines.append("")
             lines.append("```python")
@@ -113,7 +113,7 @@ def generate_mdx(
                 lines.append("")
                 # Format docstring with Griffe
                 formatted_docstring = format_docstring_with_griffe(func["docstring"])
-                lines.append(escape_mdx_content(formatted_docstring))
+                lines.append(renderer.escape(formatted_docstring))
                 lines.append("")
 
     # Classes
@@ -134,7 +134,7 @@ def generate_mdx(
                 )
             
             header = f"### `{cls['name']}`"
-            header_with_link = add_source_link_to_header(header, source_link)
+            header_with_link = renderer.header_with_source(header, source_link)
             lines.append(header_with_link)
             lines.append("")
 
@@ -142,7 +142,7 @@ def generate_mdx(
                 lines.append("")
                 # Format docstring with Griffe
                 formatted_docstring = format_docstring_with_griffe(cls["docstring"])
-                lines.append(escape_mdx_content(formatted_docstring))
+                lines.append(renderer.escape(formatted_docstring))
                 lines.append("")
 
             if cls["methods"]:
@@ -169,7 +169,7 @@ def generate_mdx(
                     method_name = method["name"]
                     
                     method_header = f"#### `{method_name}`"
-                    method_header_with_link = add_source_link_to_header(method_header, method_source_link)
+                    method_header_with_link = renderer.header_with_source(method_header, method_source_link)
                     lines.append(method_header_with_link)
                     lines.append("")
                     lines.append("```python")
@@ -181,7 +181,7 @@ def generate_mdx(
                         formatted_docstring = format_docstring_with_griffe(
                             method["docstring"]
                         )
-                        lines.append(escape_mdx_content(formatted_docstring))
+                        lines.append(renderer.escape(formatted_docstring))
                         lines.append("")
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
