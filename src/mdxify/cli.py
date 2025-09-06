@@ -13,6 +13,7 @@ from .discovery import find_all_modules, get_module_source_file, should_include_
 from .generator import generate_mdx
 from .navigation import update_docs_json
 from .parser import parse_module_fast, parse_modules_with_inheritance
+from .renderers import get_renderer
 from .source_links import detect_github_repo_url
 
 
@@ -78,7 +79,7 @@ class SimpleProgressBar:
             print()  # New line after progress bar
 
 
-def remove_excluded_files(output_dir: Path, exclude_patterns: list[str]) -> int:
+def remove_excluded_files(output_dir: Path, exclude_patterns: list[str], extension: str = "mdx") -> int:
     """Remove existing MDX files for excluded modules.
     
     Returns the number of files removed.
@@ -87,7 +88,7 @@ def remove_excluded_files(output_dir: Path, exclude_patterns: list[str]) -> int:
         return 0
         
     removed_count = 0
-    for mdx_file in output_dir.glob("*.mdx"):
+    for mdx_file in output_dir.glob(f"*.{extension}"):
         # Convert filename back to module name
         stem = mdx_file.stem
         if stem.endswith("-__init__"):
@@ -174,6 +175,12 @@ def main():
         help="Git branch name for source code links (default: main)",
     )
     parser.add_argument(
+        "--format",
+        choices=["mdx", "md"],
+        default="mdx",
+        help="Output format: 'mdx' (default) or 'md' (Markdown)",
+    )
+    parser.add_argument(
         "--include-internal",
         action="store_true",
         default=False,
@@ -237,6 +244,10 @@ def main():
     # Remove duplicates
     modules_to_process = sorted(set(modules_to_process))
     
+    # Select renderer early (used by cleanup for excludes)
+    renderer = get_renderer(args.format)
+    ext = renderer.file_extension
+
     # Filter out excluded modules
     if args.exclude:
         excluded_count = 0
@@ -265,9 +276,9 @@ def main():
         modules_to_process = filtered_modules
         
         # Remove existing MDX files for excluded modules (declarative behavior)
-        removed_count = remove_excluded_files(args.output_dir, args.exclude)
+        removed_count = remove_excluded_files(args.output_dir, args.exclude, extension=ext)
         if removed_count > 0:
-            print(f"Removed {removed_count} existing MDX files for excluded modules")
+            print(f"Removed {removed_count} existing {ext} files for excluded modules")
 
     # Determine repository URL for source links
     repo_url = args.repo_url
@@ -275,10 +286,15 @@ def main():
         repo_url = detect_github_repo_url()
         if repo_url and args.verbose:
             print(f"Detected repository: {repo_url}")
+
+    # If using Markdown, disable nav updates (Mintlify is MDX-focused)
+    if renderer.file_extension == "md" and args.update_nav:
+        print("Warning: --format md selected; skipping navigation updates.")
+        args.update_nav = False
     
     # Clean up existing MDX files when using --all (declarative behavior)
     if args.all and args.output_dir.exists():
-        existing_files = list(args.output_dir.glob("*.mdx"))
+        existing_files = list(args.output_dir.glob(f"*.{ext}"))
         # Build a set of expected filenames for current modules
         expected_files = set()
         for module_name in modules_to_process:
@@ -289,9 +305,9 @@ def main():
                 for m in modules_to_process
             )
             if has_submodules:
-                filename = f"{module_name.replace('.', '-')}-__init__.mdx"
+                filename = f"{module_name.replace('.', '-')}-__init__.{ext}"
             else:
-                filename = f"{module_name.replace('.', '-')}.mdx"
+                filename = f"{module_name.replace('.', '-')}.{ext}"
             expected_files.add(filename)
         
         # Remove files that shouldn't exist anymore
@@ -311,7 +327,7 @@ def main():
                     removed_count += 1
         
         if removed_count > 0:
-            print(f"Removed {removed_count} stale MDX files")
+            print(f"Removed {removed_count} stale {ext} files")
     
     # Generate documentation
     generated_modules = []
@@ -338,10 +354,10 @@ def main():
                     # If it has submodules, save it as __init__
                     if has_submodules:
                         output_file = (
-                            args.output_dir / f"{module_name.replace('.', '-')}-__init__.mdx"
+                            args.output_dir / f"{module_name.replace('.', '-')}-__init__.{ext}"
                         )
                     else:
-                        output_file = args.output_dir / f"{module_name.replace('.', '-')}.mdx"
+                        output_file = args.output_dir / f"{module_name.replace('.', '-')}.{ext}"
 
                     generate_mdx(
                         module_info, 
@@ -349,6 +365,7 @@ def main():
                         repo_url=repo_url,
                         branch=args.branch,
                         root_module=args.root_module,
+                        renderer=renderer,
                     )
 
                     generated_modules.append(module_name)
@@ -397,10 +414,10 @@ def main():
                 # If it has submodules, save it as __init__
                 if has_submodules:
                     output_file = (
-                        args.output_dir / f"{module_name.replace('.', '-')}-__init__.mdx"
+                        args.output_dir / f"{module_name.replace('.', '-')}-__init__.{ext}"
                     )
                 else:
-                    output_file = args.output_dir / f"{module_name.replace('.', '-')}.mdx"
+                    output_file = args.output_dir / f"{module_name.replace('.', '-')}.{ext}"
 
                 file_existed = output_file.exists()
                 generate_mdx(
@@ -409,6 +426,7 @@ def main():
                     repo_url=repo_url,
                     branch=args.branch,
                     root_module=args.root_module,
+                    renderer=renderer,
                 )
 
                 module_time = time.time() - module_start
@@ -442,9 +460,9 @@ def main():
                         for m in modules_to_process
                     )
                     if has_submodules:
-                        output_file = args.output_dir / f"{module_name.replace('.', '-')}-__init__.mdx"
+                        output_file = args.output_dir / f"{module_name.replace('.', '-')}-__init__.{ext}"
                     else:
-                        output_file = args.output_dir / f"{module_name.replace('.', '-')}.mdx"
+                        output_file = args.output_dir / f"{module_name.replace('.', '-')}.{ext}"
                     if output_file.exists():
                         existing_files += 1
             
