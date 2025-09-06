@@ -1,13 +1,13 @@
 # mdxify
 
-Generate MDX API documentation from Python modules with automatic navigation structure.
+Generate API documentation from Python modules with automatic navigation and source links. MDX is the default output today; Markdown support is planned.
 
 ## Projects Using mdxify
 
-mdxify is powering the API documentation for the following projects:
+mdxify powers the API docs for:
 
-- **[FastMCP](https://github.com/jlowin/fastmcp)** by Jeremiah Lowin - See it in action at [gofastmcp.com](https://gofastmcp.com/python-sdk)
-- **[Prefect](https://github.com/PrefectHQ/prefect)** - See the API reference at [docs.prefect.io](https://docs.prefect.io/v3/api-ref/python)
+- [FastMCP](https://github.com/jlowin/fastmcp) — live at https://gofastmcp.com/python-sdk
+- [Prefect](https://github.com/PrefectHQ/prefect) — API ref at https://docs.prefect.io/v3/api-ref/python
 
 ## Installation
 
@@ -15,129 +15,127 @@ mdxify is powering the API documentation for the following projects:
 pip install mdxify
 ```
 
-## Usage
+## Quick Start
 
-Generate documentation for all modules in a package:
+<details>
+<summary>Basic commands</summary>
+
+Generate docs for all modules in a package:
 
 ```bash
 mdxify --all --root-module mypackage --output-dir docs/python-sdk
 ```
 
-Generate documentation for specific modules:
+Generate docs for specific modules:
 
 ```bash
 mdxify mypackage.core mypackage.utils --output-dir docs/python-sdk
 ```
 
-Exclude internal modules from documentation:
+Exclude internal modules:
 
 ```bash
-mdxify --all --root-module mypackage --exclude mypackage.internal --exclude mypackage.tests
+mdxify --all --root-module mypackage \
+  --exclude mypackage.internal --exclude mypackage.tests
 ```
 
-### Options
+</details>
 
-- `modules`: Specific modules to document
-- `--all`: Generate documentation for all modules under the root module
-- `--root-module`: Root module to generate docs for (required when using --all)
-- `--output-dir`: Output directory for generated MDX files (default: docs/python-sdk)
-- `--update-nav/--no-update-nav`: Update docs.json navigation (default: True)
-- `--skip-empty-parents`: Skip parent modules that only contain boilerplate (default: False)
-- `--anchor-name` / `--navigation-key`: Name of the navigation anchor or group to update (default: 'SDK Reference')
-- `--exclude`: Module to exclude from documentation (can be specified multiple times). Excludes the module and all its submodules.
-- `--repo-url`: GitHub repository URL for source code links (e.g., https://github.com/owner/repo). If not provided, will attempt to detect from git remote.
-- `--branch`: Git branch name for source code links (default: main)
+<details>
+<summary>GitHub Actions example</summary>
 
-### Navigation Updates
+Create `.github/workflows/docs.yml`:
 
-mdxify can automatically update your `docs.json` navigation by finding either anchors or groups:
+```yaml
+name: Generate API Docs
 
-1. **First run**: Add a placeholder in your `docs.json` using either format:
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**/*.py'
+      - 'pyproject.toml'
 
-**Anchor format (e.g., FastMCP):**
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Generate API documentation
+        run: uvx mdxify --all --root-module mypackage --output-dir docs/python-sdk
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: 'docs: update API reference [skip ci]'
+          file_pattern: 'docs/python-sdk/**/*.mdx'
+```
+
+</details>
+
+## CLI Options
+
+- `modules`: Modules to document
+- `--all`: Generate docs for all modules under the root module
+- `--root-module`: Root module (required with `--all`)
+- `--output-dir`: Output directory (default: `docs/python-sdk`)
+- `--update-nav/--no-update-nav`: Update Mintlify `docs.json` (default: True)
+- `--skip-empty-parents`: Skip boilerplate parents in nav (default: False)
+- `--anchor-name` / `--navigation-key`: Anchor/group name to update (default: `SDK Reference`)
+- `--exclude`: Module(s) to exclude (repeatable, excludes submodules too)
+- `--repo-url`: GitHub repo for source links (auto-detected if omitted)
+- `--branch`: Git branch for source links (default: `main`)
+
+## Navigation Updates (Mintlify)
+
+mdxify can update `docs/docs.json` by finding either anchors or groups. Add a placeholder for the first run:
+
+Anchor format:
+
 ```json
 {
   "navigation": [
-    {
-      "anchor": "SDK Reference",
-      "pages": [
-        {"$mdxify": "generated"}
-      ]
-    }
+    { "anchor": "SDK Reference", "pages": [{ "$mdxify": "generated" }] }
   ]
 }
 ```
 
-**Group format (e.g., Prefect):**
+Group format:
+
 ```json
 {
   "navigation": [
-    {
-      "group": "SDK Reference",
-      "pages": [
-        {"$mdxify": "generated"}
-      ]
-    }
+    { "group": "SDK Reference", "pages": [{ "$mdxify": "generated" }] }
   ]
 }
 ```
 
-2. **Subsequent runs**: mdxify will find and update the existing anchor or group directly - no placeholder needed!
+Subsequent runs will update the existing anchor/group automatically. Configure the target with `--anchor-name` (alias `--navigation-key`).
 
-The `--anchor-name` parameter (or its alias `--navigation-key`) identifies which anchor or group to update.
+## Source Code Links
 
-### Source Code Links
-
-mdxify can automatically add links to source code on GitHub for all functions, classes, and methods:
+Add GitHub source links to functions/classes/methods:
 
 ```bash
 # Auto-detect repository from git remote
 mdxify --all --root-module mypackage
 
 # Or specify repository explicitly
-mdxify --all --root-module mypackage --repo-url https://github.com/owner/repo --branch develop
+mdxify --all --root-module mypackage \
+  --repo-url https://github.com/owner/repo --branch develop
 ```
 
-This adds source links next to each function/class/method that link directly to the code on GitHub.
-
-#### Customizing Source Link Text
-
-You can customize the link text/symbol using the `MDXIFY_SOURCE_LINK_TEXT` environment variable:
-
-```bash
-# Use custom text
-export MDXIFY_SOURCE_LINK_TEXT="[src]"
-mdxify --all --root-module mypackage
-
-# Use emoji
-export MDXIFY_SOURCE_LINK_TEXT="🔗"
-mdxify --all --root-module mypackage
-
-# Use different Unicode symbol (default is "view on GitHub ↗")
-export MDXIFY_SOURCE_LINK_TEXT="⧉"
-mdxify --all --root-module mypackage
-```
+Customize link text via `MDXIFY_SOURCE_LINK_TEXT` if desired.
 
 ## Features
 
-- **Fast AST-based parsing** - No module imports required
-- **MDX output** - Compatible with modern documentation frameworks
-- **Automatic navigation** - Generates hierarchical navigation structure
-- **Google-style docstrings** - Formats docstrings using Griffe
-- **Smart filtering** - Excludes private modules and known test patterns
+- Fast AST-based parsing (no imports)
+- MDX output with safe escaping
+- Automatic hierarchical navigation (Mintlify)
+- Google-style docstrings via Griffe
+- Smart filtering of private modules
 
 ## Development
 
-```bash
-# Install development dependencies
-uv sync
-
-# Run tests
-uv run pytest
-
-# Run type checking
-uv run ty check
-
-# Run linting
-uv run ruff check src/ tests/
-```
+See `CONTRIBUTING.md` for local setup, testing, linting, and release guidance.
