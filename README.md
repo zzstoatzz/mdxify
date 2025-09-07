@@ -1,6 +1,6 @@
 # mdxify
 
-Generate API documentation from Python modules with automatic navigation and source links. MDX is the default output today; Markdown support is planned.
+Generate API documentation from Python modules with automatic navigation and source links. MDX is the default output and Markdown is also supported via `--format md`.
 
 ## Projects Using mdxify
 
@@ -9,10 +9,12 @@ mdxify powers the API docs for:
 - [FastMCP](https://github.com/jlowin/fastmcp) — live at https://gofastmcp.com/python-sdk
 - [Prefect](https://github.com/PrefectHQ/prefect) — API ref at https://docs.prefect.io/v3/api-ref/python
 
-## Installation
+## Usage
+
+Run without installing using uvx:
 
 ```bash
-pip install mdxify
+uvx mdxify --all --root-module mypackage --output-dir docs/python-sdk
 ```
 
 ## Quick Start
@@ -23,19 +25,19 @@ pip install mdxify
 Generate docs for all modules in a package:
 
 ```bash
-mdxify --all --root-module mypackage --output-dir docs/python-sdk
+uvx mdxify --all --root-module mypackage --output-dir docs/python-sdk
 ```
 
 Generate docs for specific modules:
 
 ```bash
-mdxify mypackage.core mypackage.utils --output-dir docs/python-sdk
+uvx mdxify mypackage.core mypackage.utils --output-dir docs/python-sdk
 ```
 
 Exclude internal modules:
 
 ```bash
-mdxify --all --root-module mypackage \
+uvx mdxify --all --root-module mypackage \
   --exclude mypackage.internal --exclude mypackage.tests
 ```
 
@@ -119,14 +121,20 @@ Add GitHub source links to functions/classes/methods:
 
 ```bash
 # Auto-detect repository from git remote
-mdxify --all --root-module mypackage
+uvx mdxify --all --root-module mypackage
 
 # Or specify repository explicitly
-mdxify --all --root-module mypackage \
+uvx mdxify --all --root-module mypackage \
   --repo-url https://github.com/owner/repo --branch develop
 ```
 
 Customize link text via `MDXIFY_SOURCE_LINK_TEXT` if desired.
+
+To generate Markdown instead of MDX, pass `--format md` (navigation updates are disabled in Markdown mode):
+
+```bash
+uvx mdxify --all --root-module mypackage --format md --no-update-nav
+```
 
 ## Features
 
