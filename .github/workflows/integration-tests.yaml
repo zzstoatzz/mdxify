@@ -85,7 +85,7 @@ jobs:
           cd prefect_test
           
           # Test with editable install
-          uv pip install -e .
+          uv pip install --system -e .
           uvx --from ${{ github.workspace }} mdxify --all --root-module prefect --output-dir docs/api --no-update-nav
           
           # Verify core files exist (they may have __init__ suffix)
