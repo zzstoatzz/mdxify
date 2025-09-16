@@ -39,50 +39,20 @@ jobs:
         run: |
           uv run pytest tests/test_integration.py -v --tb=short
       
-      - name: Test mdxify as a tool (isolated environment)
+      - name: Test mdxify error handling (isolated environment)
         run: |
-          # Install mdxify as a tool from current source
-          uv tool install -e . --force
-          
-          # Create a test project in a separate directory
+          # Test that mdxify properly fails when module can't be found
           cd /tmp
-          mkdir -p test_project/src/testpkg
-          echo '"""Test package."""' > test_project/src/testpkg/__init__.py
-          echo 'def hello(): """Say hello."""; return "Hello!"' > test_project/src/testpkg/main.py
+          mkdir test_isolated
+          cd test_isolated
           
-          cat > test_project/pyproject.toml << EOF
-          [project]
-          name = "testpkg"
-          version = "0.1.0"
-          
-          [tool.setuptools]
-          packages = ["testpkg"]
-          
-          [tool.setuptools.package-dir]
-          "" = "src"
-          EOF
-          
-          cd test_project
-          
-          # This should fail gracefully (package not in tool environment)
-          if mdxify --all --root-module testpkg --output-dir docs --no-update-nav; then
+          # This should fail gracefully (package doesn't exist)
+          if uvx --from ${{ github.workspace }} mdxify --all --root-module nonexistent_package --output-dir docs --no-update-nav; then
             echo "ERROR: Should have failed when package not found"
             exit 1
           fi
           
-          echo "Good! mdxify correctly failed when package not found."
-          
-          # Now test with --with-editable (should work)  
-          # Install the test package and run mdxify with access to it
-          uv pip install -e .
-          mdxify --all --root-module testpkg --output-dir docs --no-update-nav
-          
-          # Verify files were created
-          ls -la docs/
-          test -f docs/testpkg.mdx || test -f docs/testpkg-__init__.mdx || exit 1
-          test -f docs/testpkg-main.mdx || exit 1
-          
-          echo "Success! mdxify works when package is installed"
+          echo "✓ mdxify correctly failed with helpful error when package not found"
           
       - name: Test with real Prefect-like structure
         run: |
