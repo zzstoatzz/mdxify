@@ -201,6 +201,9 @@ def main():
 
     args = parser.parse_args()
 
+    # Show version banner for easier debugging and support requests
+    print(f"mdxify version {__version__}")
+
     # Configure logging based on verbosity
     if args.verbose:
         # Show all warnings when verbose
