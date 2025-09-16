@@ -78,7 +78,7 @@ def test_skip_empty_parents_flag():
     assert args.skip_empty_parents is True
 
 
-def test_cli_processes_specified_modules():
+def test_cli_processes_specified_modules(capsys):
     """Test processing specific modules."""
     with patch("mdxify.cli.find_all_modules") as mock_find, \
          patch("mdxify.cli.get_module_source_file") as mock_source, \
@@ -94,9 +94,12 @@ def test_cli_processes_specified_modules():
         # Run
         with pytest.raises(SystemExit) as exc_info:
             main()
-        
+
         assert exc_info.value.code == 0  # type: ignore
-        
+
+        captured = capsys.readouterr()
+        assert f"mdxify version {__version__}" in captured.out
+
         # Verify module was processed
         mock_parse.assert_called_once_with("mypackage.core", Path("mypackage/core.py"), False)
         mock_generate.assert_called_once()
