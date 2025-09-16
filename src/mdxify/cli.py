@@ -230,6 +230,15 @@ def main():
         if args.verbose:
             print(f"Finding all {args.root_module} modules...")
         modules_to_process = find_all_modules(args.root_module)
+        if not modules_to_process:
+            print(f"Warning: Could not find any modules for '{args.root_module}'.")
+            print("This may happen when:")
+            print("  - The module is not installed in the current environment")
+            print("  - The module name is incorrect")
+            print("  - Running mdxify as a tool without the target package installed")
+            print("")
+            print("To fix: Install the target package or run mdxify with --with-editable")
+            sys.exit(1)
         if args.verbose:
             print(f"Found {len(modules_to_process)} modules")
         else:
@@ -296,7 +305,8 @@ def main():
         args.update_nav = False
     
     # Clean up existing MDX files when using --all (declarative behavior)
-    if args.all and args.output_dir.exists():
+    # Only perform cleanup if we successfully found modules to process
+    if args.all and args.output_dir.exists() and modules_to_process:
         existing_files = list(args.output_dir.glob(f"*.{ext}"))
         # Build a set of expected filenames for current modules
         expected_files = set()

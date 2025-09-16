@@ -1,0 +1,83 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.9", "3.12"]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+      
+      - name: Run integration tests
+        run: |
+          uv run pytest tests/test_integration.py -v --tb=short
+      
+      - name: Test mdxify error handling (isolated environment)
+        run: |
+          # Test that mdxify properly fails when module can't be found
+          cd /tmp
+          mkdir test_isolated
+          cd test_isolated
+          
+          # This should fail gracefully (package doesn't exist)
+          if uvx --from ${{ github.workspace }} mdxify --all --root-module nonexistent_package --output-dir docs --no-update-nav; then
+            echo "ERROR: Should have failed when package not found"
+            exit 1
+          fi
+          
+          echo "✓ mdxify correctly failed with helpful error when package not found"
+          
+      - name: Test deletion prevention with existing files
+        run: |
+          # Test that mdxify doesn't delete files when it can't find modules
+          cd /tmp
+          mkdir -p test_deletion/docs
+          
+          # Create some existing documentation files
+          echo "# Existing Flows Documentation" > test_deletion/docs/prefect-flows.mdx
+          echo "# Existing Tasks Documentation" > test_deletion/docs/prefect-tasks.mdx
+          echo "# Existing Blocks Documentation" > test_deletion/docs/prefect-blocks.mdx
+          
+          cd test_deletion
+          
+          # Run mdxify with a non-existent module - it should NOT delete the files
+          if uvx --from ${{ github.workspace }} mdxify --all --root-module prefect --output-dir docs --no-update-nav; then
+            echo "mdxify succeeded unexpectedly"
+          else
+            echo "mdxify failed as expected (module not found)"
+          fi
+          
+          # Verify files still exist (the critical fix)
+          echo "Checking that files were NOT deleted..."
+          test -f docs/prefect-flows.mdx || (echo "ERROR: prefect-flows.mdx was deleted!" && exit 1)
+          test -f docs/prefect-tasks.mdx || (echo "ERROR: prefect-tasks.mdx was deleted!" && exit 1)
+          test -f docs/prefect-blocks.mdx || (echo "ERROR: prefect-blocks.mdx was deleted!" && exit 1)
+          
+          echo "✓ Success! Existing documentation files were preserved when module couldn't be found"
