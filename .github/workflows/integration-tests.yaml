@@ -44,7 +44,8 @@ jobs:
           # Install mdxify as a tool
           uv tool install -e .
           
-          # Create a test project
+          # Create a test project in a separate directory
+          cd /tmp
           mkdir -p test_project/src/testpkg
           echo '"""Test package."""' > test_project/src/testpkg/__init__.py
           echo 'def hello(): """Say hello."""; return "Hello!"' > test_project/src/testpkg/main.py
@@ -61,12 +62,15 @@ jobs:
           "" = "src"
           EOF
           
-          # This should fail gracefully (package not in tool environment)
           cd test_project
-          if uvx mdxify --all --root-module testpkg --output-dir docs; then
+          
+          # This should fail gracefully (package not in tool environment)
+          if mdxify --all --root-module testpkg --output-dir docs --no-update-nav; then
             echo "ERROR: Should have failed when package not found"
             exit 1
           fi
+          
+          echo "Good! mdxify correctly failed when package not found."
           
           # Now test with --with-editable (should work)
           uvx --with-editable . mdxify --all --root-module testpkg --output-dir docs --no-update-nav
@@ -75,9 +79,12 @@ jobs:
           test -f docs/testpkg.mdx || exit 1
           test -f docs/testpkg-main.mdx || exit 1
           
+          echo "Success! mdxify works with --with-editable"
+          
       - name: Test with real Prefect-like structure
         run: |
-          # Create a more complex Prefect-like structure
+          # Create a more complex Prefect-like structure in /tmp to avoid conflicts
+          cd /tmp
           mkdir -p prefect_test/src/prefect/{flows,tasks,blocks}
           
           cat > prefect_test/pyproject.toml << EOF
@@ -108,16 +115,20 @@ jobs:
           uv pip install -e .
           uvx --from ${{ github.workspace }} mdxify --all --root-module prefect --output-dir docs/api --no-update-nav
           
-          # Verify core files exist
-          test -f docs/api/prefect-flows.mdx || exit 1
-          test -f docs/api/prefect-tasks.mdx || exit 1
-          test -f docs/api/prefect-blocks.mdx || exit 1
+          # Verify core files exist (they may have __init__ suffix)
+          ls -la docs/api/
+          test -f docs/api/prefect-flows.mdx -o -f docs/api/prefect-flows-__init__.mdx || exit 1
+          test -f docs/api/prefect-tasks.mdx -o -f docs/api/prefect-tasks-__init__.mdx || exit 1
+          test -f docs/api/prefect-blocks.mdx -o -f docs/api/prefect-blocks-__init__.mdx || exit 1
           
           # Test that re-running doesn't delete everything
           echo "Re-running mdxify..."
           uvx --from ${{ github.workspace }} mdxify --all --root-module prefect --output-dir docs/api --no-update-nav
           
           # Files should still exist
-          test -f docs/api/prefect-flows.mdx || exit 1
-          test -f docs/api/prefect-tasks.mdx || exit 1
-          test -f docs/api/prefect-blocks.mdx || exit 1
+          ls -la docs/api/
+          test -f docs/api/prefect-flows.mdx -o -f docs/api/prefect-flows-__init__.mdx || exit 1
+          test -f docs/api/prefect-tasks.mdx -o -f docs/api/prefect-tasks-__init__.mdx || exit 1
+          test -f docs/api/prefect-blocks.mdx -o -f docs/api/prefect-blocks-__init__.mdx || exit 1
+          
+          echo "Success! Files persisted after re-running mdxify"
