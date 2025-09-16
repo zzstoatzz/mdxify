@@ -1,0 +1,123 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.9", "3.12"]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+      
+      - name: Run integration tests
+        run: |
+          uv run pytest tests/test_integration.py -v --tb=short
+      
+      - name: Test mdxify as a tool (isolated environment)
+        run: |
+          # Install mdxify as a tool
+          uv tool install -e .
+          
+          # Create a test project
+          mkdir -p test_project/src/testpkg
+          echo '"""Test package."""' > test_project/src/testpkg/__init__.py
+          echo 'def hello(): """Say hello."""; return "Hello!"' > test_project/src/testpkg/main.py
+          
+          cat > test_project/pyproject.toml << EOF
+          [project]
+          name = "testpkg"
+          version = "0.1.0"
+          
+          [tool.setuptools]
+          packages = ["testpkg"]
+          
+          [tool.setuptools.package-dir]
+          "" = "src"
+          EOF
+          
+          # This should fail gracefully (package not in tool environment)
+          cd test_project
+          if uvx mdxify --all --root-module testpkg --output-dir docs; then
+            echo "ERROR: Should have failed when package not found"
+            exit 1
+          fi
+          
+          # Now test with --with-editable (should work)
+          uvx --with-editable . mdxify --all --root-module testpkg --output-dir docs --no-update-nav
+          
+          # Verify files were created
+          test -f docs/testpkg.mdx || exit 1
+          test -f docs/testpkg-main.mdx || exit 1
+          
+      - name: Test with real Prefect-like structure
+        run: |
+          # Create a more complex Prefect-like structure
+          mkdir -p prefect_test/src/prefect/{flows,tasks,blocks}
+          
+          cat > prefect_test/pyproject.toml << EOF
+          [project]
+          name = "prefect"
+          version = "3.0.0"
+          dependencies = []
+          
+          [tool.setuptools]
+          packages = ["prefect"]
+          
+          [tool.setuptools.package-dir]
+          "" = "src"
+          EOF
+          
+          # Create module files
+          echo '"""Prefect."""' > prefect_test/src/prefect/__init__.py
+          echo '"""Flows."""' > prefect_test/src/prefect/flows/__init__.py
+          echo 'class Flow: """A flow."""' > prefect_test/src/prefect/flows/flow.py
+          echo '"""Tasks."""' > prefect_test/src/prefect/tasks/__init__.py  
+          echo 'def task(fn): """Task decorator."""; return fn' > prefect_test/src/prefect/tasks/task.py
+          echo '"""Blocks."""' > prefect_test/src/prefect/blocks/__init__.py
+          echo 'class Block: """A block."""' > prefect_test/src/prefect/blocks/core.py
+          
+          cd prefect_test
+          
+          # Test with editable install
+          uv pip install -e .
+          uvx --from ${{ github.workspace }} mdxify --all --root-module prefect --output-dir docs/api --no-update-nav
+          
+          # Verify core files exist
+          test -f docs/api/prefect-flows.mdx || exit 1
+          test -f docs/api/prefect-tasks.mdx || exit 1
+          test -f docs/api/prefect-blocks.mdx || exit 1
+          
+          # Test that re-running doesn't delete everything
+          echo "Re-running mdxify..."
+          uvx --from ${{ github.workspace }} mdxify --all --root-module prefect --output-dir docs/api --no-update-nav
+          
+          # Files should still exist
+          test -f docs/api/prefect-flows.mdx || exit 1
+          test -f docs/api/prefect-tasks.mdx || exit 1
+          test -f docs/api/prefect-blocks.mdx || exit 1
