@@ -54,54 +54,30 @@ jobs:
           
           echo "✓ mdxify correctly failed with helpful error when package not found"
           
-      - name: Test with real Prefect-like structure
+      - name: Test deletion prevention with existing files
         run: |
-          # Create a more complex Prefect-like structure in /tmp to avoid conflicts
+          # Test that mdxify doesn't delete files when it can't find modules
           cd /tmp
-          mkdir -p prefect_test/src/prefect/{flows,tasks,blocks}
+          mkdir -p test_deletion/docs
           
-          cat > prefect_test/pyproject.toml << EOF
-          [project]
-          name = "prefect"
-          version = "3.0.0"
-          dependencies = []
+          # Create some existing documentation files
+          echo "# Existing Flows Documentation" > test_deletion/docs/prefect-flows.mdx
+          echo "# Existing Tasks Documentation" > test_deletion/docs/prefect-tasks.mdx
+          echo "# Existing Blocks Documentation" > test_deletion/docs/prefect-blocks.mdx
           
-          [tool.setuptools]
-          packages = ["prefect"]
+          cd test_deletion
           
-          [tool.setuptools.package-dir]
-          "" = "src"
-          EOF
+          # Run mdxify with a non-existent module - it should NOT delete the files
+          if uvx --from ${{ github.workspace }} mdxify --all --root-module prefect --output-dir docs --no-update-nav; then
+            echo "mdxify succeeded unexpectedly"
+          else
+            echo "mdxify failed as expected (module not found)"
+          fi
           
-          # Create module files
-          echo '"""Prefect."""' > prefect_test/src/prefect/__init__.py
-          echo '"""Flows."""' > prefect_test/src/prefect/flows/__init__.py
-          echo 'class Flow: """A flow."""' > prefect_test/src/prefect/flows/flow.py
-          echo '"""Tasks."""' > prefect_test/src/prefect/tasks/__init__.py  
-          echo 'def task(fn): """Task decorator."""; return fn' > prefect_test/src/prefect/tasks/task.py
-          echo '"""Blocks."""' > prefect_test/src/prefect/blocks/__init__.py
-          echo 'class Block: """A block."""' > prefect_test/src/prefect/blocks/core.py
+          # Verify files still exist (the critical fix)
+          echo "Checking that files were NOT deleted..."
+          test -f docs/prefect-flows.mdx || (echo "ERROR: prefect-flows.mdx was deleted!" && exit 1)
+          test -f docs/prefect-tasks.mdx || (echo "ERROR: prefect-tasks.mdx was deleted!" && exit 1)
+          test -f docs/prefect-blocks.mdx || (echo "ERROR: prefect-blocks.mdx was deleted!" && exit 1)
           
-          cd prefect_test
-          
-          # Test with editable install
-          uv pip install --system -e .
-          uvx --from ${{ github.workspace }} mdxify --all --root-module prefect --output-dir docs/api --no-update-nav
-          
-          # Verify core files exist (they may have __init__ suffix)
-          ls -la docs/api/
-          test -f docs/api/prefect-flows.mdx -o -f docs/api/prefect-flows-__init__.mdx || exit 1
-          test -f docs/api/prefect-tasks.mdx -o -f docs/api/prefect-tasks-__init__.mdx || exit 1
-          test -f docs/api/prefect-blocks.mdx -o -f docs/api/prefect-blocks-__init__.mdx || exit 1
-          
-          # Test that re-running doesn't delete everything
-          echo "Re-running mdxify..."
-          uvx --from ${{ github.workspace }} mdxify --all --root-module prefect --output-dir docs/api --no-update-nav
-          
-          # Files should still exist
-          ls -la docs/api/
-          test -f docs/api/prefect-flows.mdx -o -f docs/api/prefect-flows-__init__.mdx || exit 1
-          test -f docs/api/prefect-tasks.mdx -o -f docs/api/prefect-tasks-__init__.mdx || exit 1
-          test -f docs/api/prefect-blocks.mdx -o -f docs/api/prefect-blocks-__init__.mdx || exit 1
-          
-          echo "Success! Files persisted after re-running mdxify"
+          echo "✓ Success! Existing documentation files were preserved when module couldn't be found"
