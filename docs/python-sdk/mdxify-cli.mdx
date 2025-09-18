@@ -10,10 +10,10 @@ CLI interface for mdxify.
 
 ## Functions
 
-### `remove_excluded_files` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/cli.py#L81" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `remove_excluded_files` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/cli.py#L82" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
-remove_excluded_files(output_dir: Path, exclude_patterns: list[str]) -> int
+remove_excluded_files(output_dir: Path, exclude_patterns: list[str], extension: str = 'mdx') -> int
 ```
 
 
@@ -22,7 +22,7 @@ Remove existing MDX files for excluded modules.
 Returns the number of files removed.
 
 
-### `main` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/cli.py#L108" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `main` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/cli.py#L109" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 main()
@@ -30,7 +30,7 @@ main()
 
 ## Classes
 
-### `SimpleProgressBar` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/cli.py#L19" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `SimpleProgressBar` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/cli.py#L20" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 
 A simple progress bar using only built-in Python.
@@ -38,7 +38,7 @@ A simple progress bar using only built-in Python.
 
 **Methods:**
 
-#### `update` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/cli.py#L30" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `update` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/cli.py#L31" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 update(self, n: int = 1)
@@ -47,7 +47,7 @@ update(self, n: int = 1)
 Update progress by n steps.
 
 
-#### `finish` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/cli.py#L73" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `finish` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/cli.py#L74" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 finish(self)

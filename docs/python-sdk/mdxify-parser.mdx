@@ -10,7 +10,7 @@ AST-based module parsing functionality.
 
 ## Functions
 
-### `extract_docstring` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/parser.py#L12" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `extract_docstring` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/parser.py#L12" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 extract_docstring(node: ast.AST) -> str
@@ -20,7 +20,7 @@ extract_docstring(node: ast.AST) -> str
 Extract docstring from an AST node.
 
 
-### `format_arg` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/parser.py#L29" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `format_arg` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/parser.py#L29" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 format_arg(arg: ast.arg) -> str
@@ -30,7 +30,7 @@ format_arg(arg: ast.arg) -> str
 Format a function argument.
 
 
-### `extract_function_signature` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/parser.py#L37" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `extract_function_signature` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/parser.py#L37" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 extract_function_signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str
@@ -40,7 +40,7 @@ extract_function_signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str
 Extract function signature.
 
 
-### `extract_base_classes` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/parser.py#L68" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `extract_base_classes` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/parser.py#L68" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 extract_base_classes(node: ast.ClassDef) -> list[str]
@@ -50,7 +50,7 @@ extract_base_classes(node: ast.ClassDef) -> list[str]
 Extract base class names from a class definition.
 
 
-### `extract_methods_from_class` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/parser.py#L87" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `extract_methods_from_class` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/parser.py#L87" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 extract_methods_from_class(node: ast.ClassDef, include_internal: bool = False) -> list[dict[str, Any]]
@@ -60,7 +60,7 @@ extract_methods_from_class(node: ast.ClassDef, include_internal: bool = False) -
 Extract methods from a class definition.
 
 
-### `parse_module_fast` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/parser.py#L167" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `parse_module_fast` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/parser.py#L167" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 parse_module_fast(module_name: str, source_file: Path, include_internal: bool = False, class_registry: ClassRegistry | None = None) -> dict[str, Any]
@@ -70,7 +70,7 @@ parse_module_fast(module_name: str, source_file: Path, include_internal: bool = 
 Parse a module quickly using AST.
 
 
-### `parse_modules_with_inheritance` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/parser.py#L224" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `parse_modules_with_inheritance` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/parser.py#L224" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 parse_modules_with_inheritance(modules_to_process: list[str], include_internal: bool = False) -> dict[str, dict[str, Any]]
@@ -82,7 +82,7 @@ Parse multiple modules with inheritance support, including parent classes in pri
 
 ## Classes
 
-### `ClassRegistry` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/parser.py#L103" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `ClassRegistry` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/parser.py#L103" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 
 Registry for tracking classes and their inheritance relationships.
@@ -90,7 +90,7 @@ Registry for tracking classes and their inheritance relationships.
 
 **Methods:**
 
-#### `add_class` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/parser.py#L111" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `add_class` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/parser.py#L111" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 add_class(self, module_name: str, class_name: str, class_info: dict[str, Any], source_file: Optional[str] = None)
@@ -99,7 +99,7 @@ add_class(self, module_name: str, class_name: str, class_info: dict[str, Any], s
 Add a class to the registry.
 
 
-#### `get_class` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/parser.py#L121" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `get_class` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/parser.py#L121" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 get_class(self, class_name: str) -> dict[str, Any] | None
@@ -108,7 +108,7 @@ get_class(self, class_name: str) -> dict[str, Any] | None
 Get a class by its full name.
 
 
-#### `find_class_in_modules` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/parser.py#L125" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `find_class_in_modules` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/parser.py#L125" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 find_class_in_modules(self, class_name: str, modules: list[str]) -> str | None
@@ -117,7 +117,7 @@ find_class_in_modules(self, class_name: str, modules: list[str]) -> str | None
 Find a class by name across a list of modules.
 
 
-#### `get_inherited_methods` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/parser.py#L133" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `get_inherited_methods` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/parser.py#L133" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 get_inherited_methods(self, class_name: str, include_internal: bool = False) -> list[dict[str, Any]]
