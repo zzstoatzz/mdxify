@@ -26,14 +26,14 @@
     {
       "anchor": "SDK Reference",
       "pages": [
-        "mdxify-cli",
-        "mdxify-discovery",
-        "mdxify-formatter",
-        "mdxify-generator",
-        "mdxify-navigation",
-        "mdxify-parser",
-        "mdxify-renderers",
-        "mdxify-source_links"
+        "python-sdk/mdxify-cli",
+        "python-sdk/mdxify-discovery",
+        "python-sdk/mdxify-formatter",
+        "python-sdk/mdxify-generator",
+        "python-sdk/mdxify-navigation",
+        "python-sdk/mdxify-parser",
+        "python-sdk/mdxify-renderers",
+        "python-sdk/mdxify-source_links"
       ]
     }
   ],
