@@ -284,7 +284,7 @@ def update_docs_json(
     """Update docs.json with generated module documentation.
     
     First looks for an existing anchor or group with the given name to update.
-    If not found, looks for {"$mdxify": "generated"} placeholder.
+    If not found, looks for the $mdxify placeholder object.
     
     Args:
         docs_json_path: Path to docs.json file

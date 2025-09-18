@@ -1,46 +1,57 @@
 {
-  "$schema": "https://mintlify.com/schema.json",
+  "$schema": "https://mintlify.com/docs.json",
+  "name": "mdxify",
+  "logo": {
+    "dark": "/assets/mdxify.png",
+    "light": "/assets/mdxify.png"
+  },
+  "favicon": "/assets/mdxify.png",
   "colors": {
-    "anchors": {
-      "from": "#0D9373",
-      "to": "#07C983"
-    },
     "dark": "#0D9373",
     "light": "#07C983",
     "primary": "#0D9373"
   },
-  "favicon": "/favicon.svg",
-  "logo": {
-    "dark": "/logo/dark.svg",
-    "light": "/logo/light.svg"
+  "navbar": {
+    "primary": {
+      "href": "https://github.com/zzstoatzz/mdxify",
+      "type": "github"
+    }
   },
-  "name": "mdxify",
-  "navigation": [
-    {
-      "anchor": "Getting Started",
-      "pages": [
-        "introduction",
-        "quickstart"
-      ]
-    },
-    {
-      "anchor": "SDK Reference",
-      "pages": [
-        "python-sdk/mdxify-cli",
-        "python-sdk/mdxify-discovery",
-        "python-sdk/mdxify-formatter",
-        "python-sdk/mdxify-generator",
-        "python-sdk/mdxify-navigation",
-        "python-sdk/mdxify-parser",
-        "python-sdk/mdxify-renderers",
-        "python-sdk/mdxify-source_links"
-      ]
+  "footer": {
+    "socials": {
+      "bluesky": "https://bsky.app/profile/zzstoatzz.io",
+      "github": "https://github.com/zzstoatzz/mdxify",
+      "x": "https://x.com/zzstoatzz"
     }
-  ],
-  "topbarLinks": [
-    {
-      "name": "GitHub",
-      "url": "https://github.com/zzstoatzz/mdxify"
-    }
-  ]
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "quickstart"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "SDK Reference",
+        "pages": [
+          "python-sdk/mdxify-cli",
+          "python-sdk/mdxify-discovery",
+          "python-sdk/mdxify-formatter",
+          "python-sdk/mdxify-generator",
+          "python-sdk/mdxify-navigation",
+          "python-sdk/mdxify-parser",
+          "python-sdk/mdxify-renderers",
+          "python-sdk/mdxify-source_links"
+        ]
+      }
+    ]
+  },
+  "theme": "mint"
 }

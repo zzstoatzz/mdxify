@@ -1,0 +1,150 @@
+---
+title: Quick Start
+description: Get started with mdxify in minutes
+---
+
+## Installation
+
+mdxify runs directly with uvx - no installation needed:
+
+```bash
+uvx mdxify --all --root-module mypackage --output-dir docs/python-sdk
+```
+
+## Basic Commands
+
+### Document all modules
+
+```bash
+uvx mdxify --all --root-module mypackage --output-dir docs/python-sdk
+```
+
+### Document specific modules
+
+```bash
+uvx mdxify mypackage.core mypackage.utils --output-dir docs/python-sdk
+```
+
+### Exclude internal modules
+
+```bash
+uvx mdxify --all --root-module mypackage \
+  --exclude mypackage.internal --exclude mypackage.tests
+```
+
+## Mintlify Integration
+
+mdxify automatically updates your `docs/docs.json` navigation. Add this placeholder on first run:
+
+```json
+{
+  "navigation": [
+    { "group": "SDK Reference", "pages": [{ "$mdxify": "generated" }] }
+  ]
+}
+```
+
+Subsequent runs will update the navigation automatically.
+
+## Automation
+
+### Using a Justfile (Recommended)
+
+Create a `justfile` with recipes for documentation generation:
+
+```makefile
+# Generate API reference documentation
+api-ref:
+    uvx --with-editable . \
+        mdxify \
+        --all \
+        --root-module mypackage \
+        --output-dir docs/python-sdk \
+        --repo-url https://github.com/owner/repo
+
+# Generate docs for specific modules
+api-ref-modules *MODULES:
+    uvx mdxify {{MODULES}} \
+        --root-module mypackage \
+        --output-dir docs/python-sdk
+```
+
+### GitHub Actions
+
+Automatically generate docs and create PRs on changes:
+
+```yaml
+name: Auto-generate documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**/*.py"
+      - ".github/workflows/auto-generate-docs.yaml"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - uses: extractions/setup-just@v3
+      
+      - name: Generate docs
+        run: just api-ref
+      
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if git diff --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create PR if changes
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          BRANCH="auto-docs-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH"
+          git add .
+          git commit -m "docs: auto-update API reference"
+          git push origin "$BRANCH"
+          
+          gh pr create \
+            --title "Auto-update API documentation" \
+            --body "Automatically generated API documentation updates" \
+            --label "documentation"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## Source Links
+
+mdxify automatically detects your GitHub repository from git remotes. Override with:
+
+```bash
+uvx mdxify --all --root-module mypackage \
+  --repo-url https://github.com/owner/repo --branch develop
+```
+
+## CLI Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--all` | Generate docs for all modules | - |
+| `--root-module` | Root module name (required with `--all`) | - |
+| `--output-dir` | Output directory | `docs/python-sdk` |
+| `--exclude` | Module(s) to exclude | - |
+| `--repo-url` | GitHub repo URL | Auto-detected |
+| `--branch` | Git branch for links | `main` |
+| `--format` | Output format (`mdx` or `md`) | `mdx` |
+| `--update-nav` | Update Mintlify navigation | `true` |

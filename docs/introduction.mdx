@@ -1,0 +1,47 @@
+---
+title: Introduction
+description: Generate API documentation from Python modules
+---
+
+# `mdxify`
+
+Generate API documentation from Python modules with automatic navigation and source links. 
+
+## What is `mdxify`?
+
+`mdxify` is a fast, AST-based documentation generator that turns Python modules into clean MDX or Markdown documentation. It's designed to work seamlessly with documentation platforms like Mintlify.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Fast AST Parsing" icon="bolt">
+    No imports needed
+  </Card>
+  <Card title="MDX Output" icon="file-code">
+    Safe escaping with GitHub source links
+  </Card>
+  <Card title="Auto Navigation" icon="sitemap">
+    Automatic hierarchical navigation for Mintlify
+  </Card>
+  <Card title="Google Docstrings" icon="google">
+    Full support via Griffe parser
+  </Card>
+</CardGroup>
+
+## Who's Using `mdxify`?
+
+- **[`mdxify`](https://github.com/zzstoatzz/mdxify)** — This documentation's [api reference](/python-sdk/mdxify-cli)!
+- **[FastMCP](https://github.com/jlowin/fastmcp)** — API docs at [gofastmcp.com/python-sdk](https://gofastmcp.com/python-sdk)
+- **[Prefect](https://github.com/PrefectHQ/prefect)** — API reference at [docs.prefect.io/v3/api-ref/python](https://docs.prefect.io/v3/api-ref/python)
+
+## Quick Example
+
+```bash
+uvx mdxify --all --root-module mypackage --output-dir docs/python-sdk
+```
+
+This generates complete API documentation for `mypackage` with:
+- All public modules and functions documented
+- GitHub source links for every item
+- Automatic navigation structure
+- Clean MDX formatting

@@ -10,7 +10,7 @@ Utilities for generating source code links.
 
 ## Functions
 
-### `detect_github_repo_url` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/source_links.py#L9" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `detect_github_repo_url` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/source_links.py#L9" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 detect_github_repo_url() -> Optional[str]
@@ -20,7 +20,7 @@ detect_github_repo_url() -> Optional[str]
 Detect GitHub repository URL from git remote.
 
 
-### `get_relative_path` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/source_links.py#L41" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `get_relative_path` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/source_links.py#L41" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 get_relative_path(file_path: Path, root_module: str) -> Optional[Path]
@@ -37,7 +37,7 @@ Get the relative path from the repository root to the source file.
 - Relative path from repo root, or None if unable to determine
 
 
-### `generate_source_link` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/source_links.py#L76" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `generate_source_link` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/source_links.py#L76" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 generate_source_link(repo_url: str, branch: str, file_path: Path, line_number: int, root_module: Optional[str] = None) -> Optional[str]
@@ -57,7 +57,7 @@ Generate a GitHub source code link.
 - GitHub URL to the specific line, or None if unable to generate
 
 
-### `add_source_link_to_header` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/source_links.py#L124" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `add_source_link_to_header` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/source_links.py#L124" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 add_source_link_to_header(header: str, source_link: Optional[str], link_text: str = '[source]') -> str

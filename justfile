@@ -1,11 +1,14 @@
 # generate api docs for mdxify itself
-docs:
+generate-docs:
     uvx mdxify --all --root-module mdxify --output-dir docs/python-sdk
+
+serve-docs:
+    cd docs && npx mint@latest dev
 
 # clean and rebuild docs
 rebuild:
-    rm -rf docs/python-sdk
-    just docs
+    rm -rf docs
+    just generate-docs
 
 # run tests
 test:

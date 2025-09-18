@@ -10,7 +10,7 @@ Renderers for different output formats (MDX, Markdown).
 
 ## Functions
 
-### `get_renderer` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/renderers.py#L58" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `get_renderer` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/renderers.py#L58" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 get_renderer(name: str) -> Renderer
@@ -18,55 +18,55 @@ get_renderer(name: str) -> Renderer
 
 ## Classes
 
-### `Renderer` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/renderers.py#L13" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `Renderer` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/renderers.py#L13" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 **Methods:**
 
-#### `escape` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/renderers.py#L17" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `escape` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/renderers.py#L17" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 escape(self, content: str) -> str
 ```
 
-#### `header_with_source` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/renderers.py#L20" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `header_with_source` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/renderers.py#L20" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 header_with_source(self, header: str, source_link: Optional[str]) -> str
 ```
 
-#### `frontmatter` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/renderers.py#L23" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `frontmatter` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/renderers.py#L23" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 frontmatter(self, title: str, sidebar_title: Optional[str] = None) -> list[str]
 ```
 
-### `MDXRenderer` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/renderers.py#L32" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `MDXRenderer` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/renderers.py#L32" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 **Methods:**
 
-#### `escape` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/renderers.py#L36" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `escape` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/renderers.py#L36" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 escape(self, content: str) -> str
 ```
 
-#### `header_with_source` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/renderers.py#L39" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `header_with_source` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/renderers.py#L39" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 header_with_source(self, header: str, source_link: Optional[str]) -> str
 ```
 
-### `MarkdownRenderer` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/renderers.py#L43" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+### `MarkdownRenderer` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/renderers.py#L43" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 **Methods:**
 
-#### `escape` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/renderers.py#L47" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `escape` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/renderers.py#L47" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 escape(self, content: str) -> str
 ```
 
-#### `header_with_source` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/mdxify/renderers.py#L51" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
+#### `header_with_source` <sup><a href="https://github.com/zzstoatzz/mdxify/blob/main/src/mdxify/renderers.py#L51" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>
 
 ```python
 header_with_source(self, header: str, source_link: Optional[str]) -> str
