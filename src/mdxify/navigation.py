@@ -381,29 +381,38 @@ To use automatic navigation updates, either:
         return False
 
     # Check if content has actually changed before writing
-    # This prevents triggering pre-commit hooks when content is identical
-    
-    # Use sort_keys=True for consistent JSON serialization
-    new_content = json.dumps(docs_config, indent=2, sort_keys=True) + "\n"
-    
-    # Read existing content for comparison
-    # Re-parse and re-serialize to ensure consistent format for comparison
+    # This prevents triggering unnecessary file changes
+
+    # Read existing content first to preserve its exact format
     try:
         with open(docs_json_path, "r") as f:
+            existing_raw_content = f.read()
+            # Also parse it to compare data structures
+            f.seek(0)
             existing_data = json.load(f)
-        existing_content = json.dumps(existing_data, indent=2, sort_keys=True) + "\n"
     except (FileNotFoundError, json.JSONDecodeError):
-        existing_content = ""
-    
-    # Only write if content has changed
-    if new_content != existing_content:
-        with open(docs_json_path, "w") as f:
-            f.write(new_content)
-        if isinstance(container_info, tuple) and container_info[1] is not None:
-            print(f"Updated {docs_json_path} - replaced placeholder with {len(navigation_pages)} entries")
-        else:
-            print(f"Updated {docs_json_path} - {len(navigation_pages)} entries")
+        existing_raw_content = ""
+        existing_data = {}
+
+    # Compare the data structures (not the string representations)
+    # This handles differences in formatting, whitespace, etc.
+    if docs_config == existing_data:
+        # No actual changes to the data
+        print(f"✨ No changes needed for {docs_json_path} - content already up to date")
+        return True
+
+    # Content has changed, so we need to write it
+    # Preserve the existing file's trailing newline convention if it exists
+    new_content = json.dumps(docs_config, indent=2, sort_keys=True)
+    if existing_raw_content and existing_raw_content.endswith("\n"):
+        new_content += "\n"
+
+    with open(docs_json_path, "w") as f:
+        f.write(new_content)
+
+    if isinstance(container_info, tuple) and container_info[1] is not None:
+        print(f"Updated {docs_json_path} - replaced placeholder with {len(navigation_pages)} entries")
     else:
-        print(f"No changes needed for {docs_json_path} - {len(navigation_pages)} entries already up to date")
-    
+        print(f"Updated {docs_json_path} - {len(navigation_pages)} entries")
+
     return True
