@@ -155,3 +155,119 @@ def test_format_docstring_with_examples_section():
     assert "**Examples:**" in result
     # Check that other sections are also bold
     assert "**Args:**" in result
+
+
+def test_format_docstring_with_attributes_section():
+    """Test that Attributes section in class docstrings is rendered correctly.
+
+    Regression test for issue #32.
+    """
+    docstring = '''Schema for a column in a table.
+
+    Attributes:
+        name (str): The name of the column.
+        type (str): The data type of the column, represented as a string.
+    '''
+
+    result = format_docstring_with_griffe(docstring)
+
+    # Check that Attributes is rendered as a bold header
+    assert "**Attributes:**" in result
+    # Check that attribute names are properly formatted
+    assert "- `name`:" in result
+    assert "- `type`:" in result
+    # Check that descriptions are present
+    assert "The name of the column" in result
+    assert "The data type of the column" in result
+
+
+def test_format_docstring_with_attributes_and_methods():
+    """Test class docstring with both Attributes and other sections."""
+    docstring = '''Configuration for database connections.
+
+    Attributes:
+        host (str): The database host address.
+        port (int): The port number for the connection.
+
+    Examples:
+        >>> config = DatabaseConfig("localhost", 5432)
+        >>> print(config.host)
+        localhost
+    '''
+
+    result = format_docstring_with_griffe(docstring)
+
+    # Check that both sections are rendered
+    assert "**Attributes:**" in result
+    assert "**Examples:**" in result
+    # Check ordering - Attributes should come before Examples
+    assert result.index("**Attributes:**") < result.index("**Examples:**")
+
+
+def test_format_docstring_with_numpy_style():
+    """Test formatting NumPy-style docstrings.
+
+    Addresses issue #31 - docstring style should be configurable.
+    """
+    docstring = '''Calculate the mean of values.
+
+    Parameters
+    ----------
+    values : list
+        A list of numeric values.
+
+    Returns
+    -------
+    float
+        The arithmetic mean.
+
+    Attributes
+    ----------
+    result : float
+        The computed result.
+    '''
+
+    result = format_docstring_with_griffe(docstring, style="numpy")
+
+    # Check that Args is rendered (Parameters -> Args)
+    assert "**Args:**" in result
+    assert "- `values`:" in result
+    # Check Returns
+    assert "**Returns:**" in result
+    # Check Attributes
+    assert "**Attributes:**" in result
+    assert "- `result`:" in result
+
+
+def test_format_docstring_with_sphinx_style():
+    """Test formatting Sphinx-style docstrings."""
+    docstring = '''Process the given data.
+
+    :param data: The input data.
+    :type data: list
+    :returns: Processed data.
+    :rtype: dict
+    '''
+
+    result = format_docstring_with_griffe(docstring, style="sphinx")
+
+    # Check that Args is rendered
+    assert "**Args:**" in result
+    assert "- `data`:" in result
+    # Check Returns
+    assert "**Returns:**" in result
+
+
+def test_format_docstring_style_default_is_google():
+    """Test that Google style is the default."""
+    docstring = '''A simple function.
+
+    Args:
+        x: First parameter.
+    '''
+
+    # Call without style parameter - should use google
+    result = format_docstring_with_griffe(docstring)
+
+    assert "**Args:**" in result
+    assert "- `x`:" in result

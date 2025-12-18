@@ -198,6 +198,12 @@ def main():
         default=False,
         help="Show verbose output including parsing warnings (default: False)",
     )
+    parser.add_argument(
+        "--docstring-style",
+        choices=["google", "numpy", "sphinx"],
+        default="google",
+        help="Docstring style to parse: 'google' (default), 'numpy', or 'sphinx'",
+    )
 
     args = parser.parse_args()
 
@@ -373,12 +379,13 @@ def main():
                         output_file = args.output_dir / f"{module_name.replace('.', '-')}.{ext}"
 
                     generate_mdx(
-                        module_info, 
+                        module_info,
                         output_file,
                         repo_url=repo_url,
                         branch=args.branch,
                         root_module=args.root_module,
                         renderer=renderer,
+                        docstring_style=args.docstring_style,
                     )
 
                     generated_modules.append(module_name)
@@ -398,6 +405,9 @@ def main():
             args.include_inheritance = False
 
     else:
+        # Capture docstring_style for use in process_module closure
+        docstring_style = args.docstring_style
+
         def process_module(module_data):
             """Process a single module."""
             i, module_name, include_internal, verbose = module_data
@@ -434,12 +444,13 @@ def main():
 
                 file_existed = output_file.exists()
                 generate_mdx(
-                    module_info, 
+                    module_info,
                     output_file,
                     repo_url=repo_url,
                     branch=args.branch,
                     root_module=args.root_module,
                     renderer=renderer,
+                    docstring_style=docstring_style,
                 )
 
                 module_time = time.time() - module_start

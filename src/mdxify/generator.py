@@ -21,21 +21,24 @@ def is_module_empty(module_path: Path) -> bool:
 
 
 def generate_mdx(
-    module_info: dict[str, Any], 
+    module_info: dict[str, Any],
     output_file: Path,
     repo_url: Optional[str] = None,
     branch: str = "main",
     root_module: Optional[str] = None,
     renderer: Optional[Renderer] = None,
+    docstring_style: str = "google",
 ) -> None:
     """Generate MDX documentation from module info.
-    
+
     Args:
         module_info: Parsed module information
         output_file: Path to write the MDX file
         repo_url: GitHub repository URL for source links
         branch: Git branch name for source links
         root_module: Root module name for finding relative paths
+        renderer: The renderer to use for output
+        docstring_style: The docstring style to parse ("google", "numpy", or "sphinx")
     """
     if renderer is None:
         renderer = MDXRenderer()
@@ -112,7 +115,7 @@ def generate_mdx(
             if func["docstring"]:
                 lines.append("")
                 # Format docstring with Griffe
-                formatted_docstring = format_docstring_with_griffe(func["docstring"])
+                formatted_docstring = format_docstring_with_griffe(func["docstring"], docstring_style)
                 lines.append(renderer.escape(formatted_docstring))
                 lines.append("")
 
@@ -141,7 +144,7 @@ def generate_mdx(
             if cls["docstring"]:
                 lines.append("")
                 # Format docstring with Griffe
-                formatted_docstring = format_docstring_with_griffe(cls["docstring"])
+                formatted_docstring = format_docstring_with_griffe(cls["docstring"], docstring_style)
                 lines.append(renderer.escape(formatted_docstring))
                 lines.append("")
 
@@ -179,7 +182,7 @@ def generate_mdx(
 
                     if method["docstring"]:
                         formatted_docstring = format_docstring_with_griffe(
-                            method["docstring"]
+                            method["docstring"], docstring_style
                         )
                         lines.append(renderer.escape(formatted_docstring))
                         lines.append("")
