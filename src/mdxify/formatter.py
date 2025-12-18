@@ -13,15 +13,20 @@ _TYPE_ANNOTATION_PATTERN = re.compile(
 _ANGLE_BRACKET_PATTERN = re.compile(r"<([^>]+)>")
 
 
-def format_docstring_with_griffe(docstring: str) -> str:
-    """Format a docstring using Griffe for better structure."""
+def format_docstring_with_griffe(docstring: str, style: str = "google") -> str:
+    """Format a docstring using Griffe for better structure.
+
+    Args:
+        docstring: The raw docstring text to format.
+        style: The docstring style to parse. One of "google", "numpy", or "sphinx".
+    """
     if not docstring:
         return ""
 
     try:
         dedented_docstring = textwrap.dedent(docstring).strip()
         doc = Docstring(dedented_docstring, lineno=1)
-        sections = doc.parse("google")
+        sections = doc.parse(style)
 
         lines = []
 
@@ -36,6 +41,17 @@ def format_docstring_with_griffe(docstring: str) -> str:
                 for param in section.value:
                     name = param.name
                     desc = param.description if hasattr(param, "description") else ""
+                    # Escape colons in the description to prevent Markdown definition list interpretation
+                    desc = desc.replace(":", "\\:")
+                    # Format as a list item
+                    lines.append(f"- `{name}`: {desc}")
+                lines.append("")
+
+            elif section.kind.value == "attributes" and section.value:
+                lines.append("**Attributes:**")
+                for attr in section.value:
+                    name = attr.name
+                    desc = attr.description if hasattr(attr, "description") else ""
                     # Escape colons in the description to prevent Markdown definition list interpretation
                     desc = desc.replace(":", "\\:")
                     # Format as a list item
