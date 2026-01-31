@@ -203,12 +203,48 @@ def find_mdxify_placeholder(obj: Any, path: list[str] | None = None) -> tuple[An
     return None
 
 
-def find_mdxify_anchor_or_group(docs_config: dict[str, Any], target_name: str) -> tuple[Any, list[str]] | None:
+def _find_version_entry(navigation: dict[str, Any] | list[Any], version: str) -> dict[str, Any] | None:
+    """Find a specific version entry within Mintlify's versioned navigation.
+
+    Mintlify's versioned navigation uses a ``versions`` array where each entry
+    has a ``version`` field. This function finds the entry matching the given
+    version string.
+
+    Args:
+        navigation: The navigation object (may contain a ``versions`` key).
+        version: The version string to match (e.g., ``"v3.0.0 (beta 1)"``).
+
+    Returns:
+        The matching version entry dict, or None if not found.
+    """
+    if not isinstance(navigation, dict):
+        return None
+    versions = navigation.get("versions")
+    if not isinstance(versions, list):
+        return None
+    for entry in versions:
+        if isinstance(entry, dict) and entry.get("version") == version:
+            return entry
+    return None
+
+
+def find_mdxify_anchor_or_group(
+    docs_config: dict[str, Any],
+    target_name: str,
+    mintlify_version: str | None = None,
+) -> tuple[Any, list[str]] | None:
     """Find an existing mdxify-managed anchor or group in the navigation.
-    
+
+    Args:
+        docs_config: The parsed docs.json configuration.
+        target_name: The anchor or group name to search for.
+        mintlify_version: If provided, constrain the search to the matching
+            entry in ``navigation.versions``. When ``None``, the entire
+            navigation tree is searched.
+
     Returns the pages list and path to it, or None if not found.
     """
-    
+
     def search_in_structure(obj: Any, current_path: list[str], target: str) -> tuple[Any, list[str]] | None:
         """Recursively search for an anchor or group with the given name."""
         if isinstance(obj, dict):
@@ -216,49 +252,61 @@ def find_mdxify_anchor_or_group(docs_config: dict[str, Any], target_name: str) -
             if obj.get("anchor") == target:
                 pages = obj.get("pages", [])
                 pages_path = current_path + ["pages"]
-                
+
                 # Check for placeholder
                 for j, page in enumerate(pages):
                     if isinstance(page, dict) and page.get("$mdxify") == "generated":
                         return (pages, j), pages_path
-                
+
                 # If we found the anchor but no placeholder, return it anyway
                 # The caller will decide whether to update based on the content
                 if pages:
                     return (pages, None), pages_path
-            
+
             # Check if this is a group with the target name
             if obj.get("group") == target:
                 pages = obj.get("pages", [])
                 pages_path = current_path + ["pages"]
-                
+
                 # Check for placeholder
                 for j, page in enumerate(pages):
                     if isinstance(page, dict) and page.get("$mdxify") == "generated":
                         return (pages, j), pages_path
-                
+
                 # If we found the group but no placeholder, return it anyway
                 # The caller will decide whether to update based on the content
                 if pages:
                     return (pages, None), pages_path
-            
+
             # Recursively search in all dict values
             for key, value in obj.items():
                 result = search_in_structure(value, current_path + [key], target)
                 if result:
                     return result
-                    
+
         elif isinstance(obj, list):
             # Search through list items
             for i, item in enumerate(obj):
                 result = search_in_structure(item, current_path + [i], target)
                 if result:
                     return result
-        
+
         return None
-    
+
     # Start searching from the navigation root
     navigation = docs_config.get("navigation", {})
+
+    # If a Mintlify version is specified, narrow the search to that version entry
+    if mintlify_version is not None:
+        version_entry = _find_version_entry(navigation, mintlify_version)
+        if version_entry is None:
+            return None
+        # Build the path prefix so callers can locate the result in the full tree
+        versions_list = navigation["versions"]
+        version_index = versions_list.index(version_entry)
+        base_path = ["navigation", "versions", version_index]
+        return search_in_structure(version_entry, base_path, target_name)
+
     return search_in_structure(navigation, ["navigation"], target_name)
 
 
@@ -274,18 +322,19 @@ def find_mdxify_anchor(docs_config: dict[str, Any], anchor_name: str) -> tuple[A
 
 
 def update_docs_json(
-    docs_json_path: Path, 
-    generated_modules: list[str], 
+    docs_json_path: Path,
+    generated_modules: list[str],
     output_dir: Path,
     regenerate_all: bool = False,
     skip_empty_parents: bool = False,
-    anchor_name: str = "SDK Reference"  # Renamed parameter would break compatibility
+    anchor_name: str = "SDK Reference",  # Renamed parameter would break compatibility
+    mintlify_version: str | None = None,
 ) -> bool:
     """Update docs.json with generated module documentation.
-    
+
     First looks for an existing anchor or group with the given name to update.
     If not found, looks for the $mdxify placeholder object.
-    
+
     Args:
         docs_json_path: Path to docs.json file
         generated_modules: List of module names that were generated
@@ -294,7 +343,10 @@ def update_docs_json(
         skip_empty_parents: Whether to skip empty parent modules
         anchor_name: Name of the navigation anchor or group to update (searches both)
             Note: Despite the parameter name, this searches for both anchors and groups.
-    
+        mintlify_version: If provided, constrain the search to the matching
+            entry in ``navigation.versions``. Useful when docs.json contains
+            multiple versioned navigations and you need to target a specific one.
+
     Returns True if successfully updated, False otherwise.
     """
     with open(docs_json_path, "r") as f:
@@ -302,18 +354,37 @@ def update_docs_json(
 
     # Use a more descriptive internal name
     navigation_key = anchor_name
-    
+
     # First, try to find an existing anchor or group
-    result = find_mdxify_anchor_or_group(docs_config, navigation_key)
-    
+    result = find_mdxify_anchor_or_group(docs_config, navigation_key, mintlify_version=mintlify_version)
+
     if not result:
         # No existing anchor/group, look for placeholder
         result = find_mdxify_placeholder(docs_config)
-        
+
         if not result:
+            version_hint = ""
+            if mintlify_version:
+                # Check if the version exists at all
+                navigation = docs_config.get("navigation", {})
+                version_entry = _find_version_entry(navigation, mintlify_version)
+                if version_entry is None:
+                    available = []
+                    versions = navigation.get("versions", [])
+                    if isinstance(versions, list):
+                        available = [
+                            v.get("version", "?") for v in versions
+                            if isinstance(v, dict)
+                        ]
+                    if available:
+                        version_hint = f"\nNote: Version '{mintlify_version}' was not found. Available versions: {', '.join(available)}\n"
+                    else:
+                        version_hint = f"\nNote: Version '{mintlify_version}' was not found and no versions are defined in navigation.\n"
+                else:
+                    version_hint = f"\nNote: Version '{mintlify_version}' exists but does not contain an anchor/group named '{anchor_name}'.\n"
             print(f"""
 Warning: Could not find mdxify anchor/group '{anchor_name}' or placeholder in docs.json
-
+{version_hint}
 To use automatic navigation updates, either:
 
 1. Add a placeholder in your docs.json using an anchor:

@@ -161,6 +161,13 @@ def main():
         help="Name of the navigation anchor or group to update (default: 'SDK Reference')",
     )
     parser.add_argument(
+        "--mintlify-version",
+        dest="mintlify_version",
+        default=None,
+        help="Target a specific Mintlify version entry in docs.json navigation.versions (e.g., 'v3.0.0'). "
+        "When set, navigation updates are scoped to the matching version instead of searching the entire tree.",
+    )
+    parser.add_argument(
         "--exclude",
         action="append",
         help="Module to exclude from documentation (can be specified multiple times). Excludes the module and all its submodules.",
@@ -540,12 +547,13 @@ def main():
             # Only do complete regeneration when --all is used
             regenerate_all = args.all or (not args.modules)
             success = update_docs_json(
-                docs_json_path, 
-                generated_modules, 
+                docs_json_path,
+                generated_modules,
                 args.output_dir,
                 regenerate_all=regenerate_all,
                 skip_empty_parents=args.skip_empty_parents,
-                anchor_name=args.navigation_key
+                anchor_name=args.navigation_key,
+                mintlify_version=args.mintlify_version,
             )
             if not success:
                 print("Failed to update navigation")
