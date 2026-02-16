@@ -28,6 +28,7 @@ def generate_mdx(
     root_module: Optional[str] = None,
     renderer: Optional[Renderer] = None,
     docstring_style: str = "google",
+    source_prefix: Optional[str] = None,
 ) -> None:
     """Generate MDX documentation from module info.
 
@@ -39,6 +40,7 @@ def generate_mdx(
         root_module: Root module name for finding relative paths
         renderer: The renderer to use for output
         docstring_style: The docstring style to parse ("google", "numpy", or "sphinx")
+        source_prefix: Optional prefix for source paths in monorepo layouts
     """
     if renderer is None:
         renderer = MDXRenderer()
@@ -101,6 +103,7 @@ def generate_mdx(
                     Path(module_info["source_file"]),
                     func["line"],
                     root_module,
+                    source_prefix,
                 )
             
             header = f"### `{func['name']}`"
@@ -134,6 +137,7 @@ def generate_mdx(
                     Path(module_info["source_file"]),
                     cls["line"],
                     root_module,
+                    source_prefix,
                 )
             
             header = f"### `{cls['name']}`"
@@ -166,6 +170,7 @@ def generate_mdx(
                                 Path(source_file),
                                 method["line"],
                                 root_module,
+                                source_prefix,
                             )
                     
                     # Add inherited indicator if this is an inherited method
