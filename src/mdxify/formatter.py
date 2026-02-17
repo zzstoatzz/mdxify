@@ -26,7 +26,7 @@ def format_docstring_with_griffe(docstring: str, style: str = "google") -> str:
     try:
         dedented_docstring = textwrap.dedent(docstring).strip()
         doc = Docstring(dedented_docstring, lineno=1)
-        sections = doc.parse(style)
+        sections = doc.parse(style)  # type: ignore[arg-type]
 
         lines = []
 

@@ -196,7 +196,7 @@ def find_mdxify_placeholder(obj: Any, path: list[str] | None = None) -> tuple[An
             if isinstance(item, dict) and item.get("$mdxify") == "generated":
                 # Found it - return the list and index
                 return (obj, i), path
-            result = find_mdxify_placeholder(item, path + [i])
+            result = find_mdxify_placeholder(item, path + [str(i)])
             if result:
                 return result
                 
@@ -287,7 +287,7 @@ def find_mdxify_anchor_or_group(
         elif isinstance(obj, list):
             # Search through list items
             for i, item in enumerate(obj):
-                result = search_in_structure(item, current_path + [i], target)
+                result = search_in_structure(item, current_path + [str(i)], target)
                 if result:
                     return result
 

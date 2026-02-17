@@ -224,17 +224,19 @@ def _versioned_docs_config():
 def test_find_version_entry():
     """Test _find_version_entry locates the right version."""
     nav = _versioned_docs_config()["navigation"]
-    assert _find_version_entry(nav, "v3.0.0") is not None
-    assert _find_version_entry(nav, "v3.0.0")["version"] == "v3.0.0"
-    assert _find_version_entry(nav, "v2.14.3") is not None
-    assert _find_version_entry(nav, "v2.14.3")["version"] == "v2.14.3"
+    entry_v3 = _find_version_entry(nav, "v3.0.0")
+    assert entry_v3 is not None
+    assert entry_v3["version"] == "v3.0.0"
+    entry_v2 = _find_version_entry(nav, "v2.14.3")
+    assert entry_v2 is not None
+    assert entry_v2["version"] == "v2.14.3"
     assert _find_version_entry(nav, "v999") is None
 
 
 def test_find_version_entry_no_versions():
     """Test _find_version_entry when navigation has no versions key."""
     assert _find_version_entry({"tabs": []}, "v1") is None
-    assert _find_version_entry([], "v1") is None  # type: ignore[arg-type]
+    assert _find_version_entry([], "v1") is None
 
 
 def test_find_anchor_scoped_to_version():

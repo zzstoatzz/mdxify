@@ -17,15 +17,15 @@ def test_version_flag(capsys):
     with patch.object(sys, "argv", ["mdxify", "--version"]):
         with pytest.raises(SystemExit) as exc_info:
             main()
-        assert exc_info.value.code == 0  # type: ignore
+        assert exc_info.value.code == 0
         captured = capsys.readouterr()
         assert f"mdxify {__version__}" in captured.out
-    
+
     # Test -V
     with patch.object(sys, "argv", ["mdxify", "-V"]):
         with pytest.raises(SystemExit) as exc_info:
             main()
-        assert exc_info.value.code == 0  # type: ignore
+        assert exc_info.value.code == 0
         captured = capsys.readouterr()
         assert f"mdxify {__version__}" in captured.out
 
@@ -54,7 +54,7 @@ def test_cli_requires_root_module_with_all():
     with patch.object(sys, "argv", ["mdxify", "--all"]):
         with pytest.raises(SystemExit) as exc_info:
             main()
-        assert exc_info.value.code == 2  # type: ignore # argparse error code
+        assert exc_info.value.code == 2  # argparse error code
 
 
 def test_skip_empty_parents_flag():
@@ -95,7 +95,7 @@ def test_cli_processes_specified_modules(capsys):
         with pytest.raises(SystemExit) as exc_info:
             main()
 
-        assert exc_info.value.code == 0  # type: ignore
+        assert exc_info.value.code == 0
 
         captured = capsys.readouterr()
         assert f"mdxify version {__version__}" in captured.out
@@ -147,8 +147,8 @@ def test_exclude_modules():
         with pytest.raises(SystemExit) as exc_info:
             main()
         
-        assert exc_info.value.code == 0  # type: ignore
-        
+        assert exc_info.value.code == 0
+
         # Check that only non-excluded modules were processed
         processed_modules = [call[0][0]["name"] for call in mock_generate.call_args_list]
         assert "mypackage" in processed_modules
@@ -202,8 +202,8 @@ def test_exclude_removes_existing_files(tmp_path):
         with pytest.raises(SystemExit) as exc_info:
             main()
         
-        assert exc_info.value.code == 0  # type: ignore
-        
+        assert exc_info.value.code == 0
+
         # Check that excluded files were removed
         assert not (output_dir / "mypackage-internal-__init__.mdx").exists()
         assert not (output_dir / "mypackage-internal-stuff.mdx").exists()
@@ -270,8 +270,8 @@ def test_include_internal():
         with pytest.raises(SystemExit) as exc_info:
             main()
         
-        assert exc_info.value.code == 0  # type: ignore
-        
+        assert exc_info.value.code == 0
+
         # Check that all modules, including internal ones, were processed
         processed_modules = [call[0][0]["name"] for call in mock_generate.call_args_list]
         assert "mypackage" in processed_modules

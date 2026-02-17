@@ -74,14 +74,11 @@ skip-magic-trailing-comma = false
 
 [tool.ty.environment]
 python-version = "3.10"
-
-[tool.ty.src]
-root = "src"
+root = ["src"]
 
 [tool.ty.rules]
 unresolved-import = "warn"
 missing-argument = "error"
-possibly-unbound-attribute = "warn"
 invalid-return-type = "error"
 unresolved-attribute = "error"
 
