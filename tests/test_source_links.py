@@ -1,13 +1,25 @@
 """Tests for source code link generation."""
 
 from pathlib import Path
+from unittest.mock import patch
+
+import pytest
 
 from mdxify.source_links import (
     add_source_link_to_header,
+    detect_git_root,
     detect_github_repo_url,
     generate_source_link,
     get_relative_path,
 )
+
+
+@pytest.fixture(autouse=True)
+def clear_git_root_cache():
+    """Clear detect_git_root LRU cache between tests."""
+    detect_git_root.cache_clear()
+    yield
+    detect_git_root.cache_clear()
 
 
 def test_detect_github_repo_url(monkeypatch):
@@ -19,54 +31,56 @@ def test_detect_github_repo_url(monkeypatch):
 
 
 def test_get_relative_path():
-    """Test relative path extraction."""
-    # Test src layout
-    path = Path("/home/user/project/src/mypackage/module.py")
-    result = get_relative_path(path, "mypackage")
-    assert result == Path("src/mypackage/module.py")
-    
-    # Test flat layout
-    path = Path("/home/user/project/mypackage/module.py")
-    result = get_relative_path(path, "mypackage")
-    assert result == Path("mypackage/module.py")
-    
-    # Test no match
-    path = Path("/home/user/project/other/module.py")
-    result = get_relative_path(path, "mypackage")
-    assert result is None
+    """Test relative path extraction with pattern matching fallback."""
+    with patch("mdxify.source_links.detect_git_root", return_value=None):
+        # Test src layout
+        path = Path("/home/user/project/src/mypackage/module.py")
+        result = get_relative_path(path, "mypackage")
+        assert result == Path("src/mypackage/module.py")
+
+        # Test flat layout
+        path = Path("/home/user/project/mypackage/module.py")
+        result = get_relative_path(path, "mypackage")
+        assert result == Path("mypackage/module.py")
+
+        # Test no match
+        path = Path("/home/user/project/other/module.py")
+        result = get_relative_path(path, "mypackage")
+        assert result is None
 
 
 def test_generate_source_link():
     """Test source link generation."""
-    # Basic test
-    link = generate_source_link(
-        "https://github.com/owner/repo",
-        "main",
-        Path("/home/user/project/src/mypackage/module.py"),
-        42,
-        "mypackage",
-    )
-    assert link == "https://github.com/owner/repo/blob/main/src/mypackage/module.py#L42"
-    
-    # Test with different branch
-    link = generate_source_link(
-        "https://github.com/owner/repo",
-        "develop",
-        Path("/home/user/project/mypackage/module.py"),
-        100,
-        "mypackage",
-    )
-    assert link == "https://github.com/owner/repo/blob/develop/mypackage/module.py#L100"
-    
-    # Test with trailing slash in repo URL
-    link = generate_source_link(
-        "https://github.com/owner/repo/",
-        "main",
-        Path("/home/user/project/src/mypackage/module.py"),
-        1,
-        "mypackage",
-    )
-    assert link == "https://github.com/owner/repo/blob/main/src/mypackage/module.py#L1"
+    with patch("mdxify.source_links.detect_git_root", return_value=None):
+        # Basic test
+        link = generate_source_link(
+            "https://github.com/owner/repo",
+            "main",
+            Path("/home/user/project/src/mypackage/module.py"),
+            42,
+            "mypackage",
+        )
+        assert link == "https://github.com/owner/repo/blob/main/src/mypackage/module.py#L42"
+
+        # Test with different branch
+        link = generate_source_link(
+            "https://github.com/owner/repo",
+            "develop",
+            Path("/home/user/project/mypackage/module.py"),
+            100,
+            "mypackage",
+        )
+        assert link == "https://github.com/owner/repo/blob/develop/mypackage/module.py#L100"
+
+        # Test with trailing slash in repo URL
+        link = generate_source_link(
+            "https://github.com/owner/repo/",
+            "main",
+            Path("/home/user/project/src/mypackage/module.py"),
+            1,
+            "mypackage",
+        )
+        assert link == "https://github.com/owner/repo/blob/main/src/mypackage/module.py#L1"
 
 
 def test_add_source_link_to_header():
@@ -100,6 +114,79 @@ def test_add_source_link_with_custom_text(monkeypatch):
     # Should still produce the icon, not the custom text
     expected = '### `function_name` <sup><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>'
     assert result == expected
+
+
+def test_detect_git_root():
+    """Test that detect_git_root returns a valid path in a git repo."""
+    result = detect_git_root()
+    # We're running tests inside the mdxify git repo
+    assert result is not None
+    assert result.is_dir()
+    assert (result / ".git").exists()
+
+
+def test_get_relative_path_monorepo_with_git_root():
+    """Test that git root produces correct paths for monorepo layouts."""
+    git_root = Path("/home/user/monorepo")
+    file_path = Path("/home/user/monorepo/src/integrations/prefect-aws/prefect_aws/credentials.py")
+
+    with patch("mdxify.source_links.detect_git_root", return_value=git_root):
+        result = get_relative_path(file_path, "prefect_aws")
+
+    assert result == Path("src/integrations/prefect-aws/prefect_aws/credentials.py")
+
+
+def test_get_relative_path_with_source_prefix():
+    """Test that source_prefix is prepended to module-relative path."""
+    file_path = Path("/home/user/monorepo/src/integrations/prefect-aws/prefect_aws/credentials.py")
+
+    result = get_relative_path(
+        file_path,
+        "prefect_aws",
+        source_prefix="src/integrations/prefect-aws",
+    )
+    assert result == Path("src/integrations/prefect-aws/prefect_aws/credentials.py")
+
+
+def test_get_relative_path_source_prefix_takes_priority():
+    """Test that source_prefix overrides git root detection."""
+    git_root = Path("/home/user/monorepo")
+    file_path = Path("/home/user/monorepo/src/integrations/prefect-aws/prefect_aws/credentials.py")
+
+    with patch("mdxify.source_links.detect_git_root", return_value=git_root):
+        result = get_relative_path(
+            file_path,
+            "prefect_aws",
+            source_prefix="custom/prefix",
+        )
+
+    # source_prefix should be used, not git root
+    assert result == Path("custom/prefix/prefect_aws/credentials.py")
+
+
+def test_get_relative_path_no_git_falls_back():
+    """Test backward-compatible fallback when git is not available."""
+    file_path = Path("/home/user/project/src/mypackage/module.py")
+
+    with patch("mdxify.source_links.detect_git_root", return_value=None):
+        result = get_relative_path(file_path, "mypackage")
+
+    assert result == Path("src/mypackage/module.py")
+
+
+def test_generate_source_link_with_source_prefix():
+    """Test end-to-end source link generation with source_prefix."""
+    with patch("mdxify.source_links.detect_git_root", return_value=None):
+        link = generate_source_link(
+            "https://github.com/PrefectHQ/prefect",
+            "main",
+            Path("/home/user/prefect/src/integrations/prefect-aws/prefect_aws/credentials.py"),
+            42,
+            "prefect_aws",
+            source_prefix="src/integrations/prefect-aws",
+        )
+
+    assert link == "https://github.com/PrefectHQ/prefect/blob/main/src/integrations/prefect-aws/prefect_aws/credentials.py#L42"
 
 
 def test_inherited_method_source_links():

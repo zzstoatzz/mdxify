@@ -182,6 +182,12 @@ def main():
         help="Git branch name for source code links (default: main)",
     )
     parser.add_argument(
+        "--source-prefix",
+        default=None,
+        help="Path prefix for source links in monorepo layouts (e.g., 'src/integrations/prefect-aws'). "
+        "Overrides automatic git root detection.",
+    )
+    parser.add_argument(
         "--format",
         choices=["mdx", "md"],
         default="mdx",
@@ -393,6 +399,7 @@ def main():
                         root_module=args.root_module,
                         renderer=renderer,
                         docstring_style=args.docstring_style,
+                        source_prefix=args.source_prefix,
                     )
 
                     generated_modules.append(module_name)
@@ -458,6 +465,7 @@ def main():
                     root_module=args.root_module,
                     renderer=renderer,
                     docstring_style=docstring_style,
+                    source_prefix=args.source_prefix,
                 )
 
                 module_time = time.time() - module_start
