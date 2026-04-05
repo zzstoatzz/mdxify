@@ -563,7 +563,10 @@ def main():
 
     # Write navigation to standalone file if requested
     if args.nav_output and generated_modules:
-        from .navigation import build_hierarchical_navigation, get_all_documented_modules
+        from .navigation import (
+            build_hierarchical_navigation,
+            get_all_documented_modules,
+        )
 
         regenerate_all = args.all or (not args.modules)
         docs_root = args.nav_output.parent
