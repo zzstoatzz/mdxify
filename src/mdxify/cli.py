@@ -1,6 +1,7 @@
 """CLI interface for mdxify."""
 
 import argparse
+import json
 import logging
 import sys
 import time
@@ -136,6 +137,14 @@ def main():
         type=Path,
         default="docs/docs.json",
         help="Path to docs.json file for navigation updates (default: docs/docs.json)",
+    )
+    parser.add_argument(
+        "--nav-output",
+        type=Path,
+        default=None,
+        help="Write the generated navigation pages array to a standalone JSON file. "
+        "When set, docs.json is not updated. "
+        "Useful with Mintlify's $ref feature for splitting navigation into separate files.",
     )
     parser.add_argument(
         "--update-nav",
@@ -552,8 +561,41 @@ def main():
 
     total_time = time.time() - start_time
 
-    # Update navigation if requested
-    if args.update_nav and generated_modules:
+    # Write navigation to standalone file if requested
+    if args.nav_output and generated_modules:
+        from .navigation import (
+            build_hierarchical_navigation,
+            get_all_documented_modules,
+        )
+
+        regenerate_all = args.all or (not args.modules)
+        docs_root = args.nav_output.parent
+        if regenerate_all:
+            navigation_pages = build_hierarchical_navigation(
+                generated_modules, args.output_dir, docs_root,
+                skip_empty_parents=args.skip_empty_parents,
+            )
+        else:
+            all_modules = get_all_documented_modules(args.output_dir)
+            public_modules = [m for m in all_modules if should_include_module(m)]
+            navigation_pages = build_hierarchical_navigation(
+                public_modules, args.output_dir, docs_root,
+                skip_empty_parents=args.skip_empty_parents,
+            )
+
+        new_content = json.dumps(navigation_pages, indent=2, ensure_ascii=False) + "\n"
+        try:
+            existing = args.nav_output.read_text()
+        except FileNotFoundError:
+            existing = ""
+        if new_content != existing:
+            args.nav_output.write_text(new_content)
+            print(f"Updated {args.nav_output} - {len(navigation_pages)} entries")
+        else:
+            print(f"✨ No changes needed for {args.nav_output}")
+
+    # Update docs.json if requested (skipped when --nav-output is used)
+    elif args.update_nav and generated_modules:
         docs_json_path = args.docs_json
         if docs_json_path.exists():
             if args.verbose:
