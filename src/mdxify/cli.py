@@ -132,6 +132,12 @@ def main():
         help="Output directory for generated MDX files (default: docs/python-sdk)",
     )
     parser.add_argument(
+        "--docs-json",
+        type=Path,
+        default="docs/docs.json",
+        help="Path to docs.json file for navigation updates (default: docs/docs.json)",
+    )
+    parser.add_argument(
         "--update-nav",
         action="store_true",
         default=True,
@@ -548,7 +554,7 @@ def main():
 
     # Update navigation if requested
     if args.update_nav and generated_modules:
-        docs_json_path = Path("docs/docs.json")
+        docs_json_path = args.docs_json
         if docs_json_path.exists():
             if args.verbose:
                 print("\nUpdating docs.json navigation...")
