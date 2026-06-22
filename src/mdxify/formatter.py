@@ -6,11 +6,35 @@ import textwrap
 from griffe import Docstring
 
 # Pre-compile regex patterns for better performance
-_CODE_BLOCK_PATTERN = re.compile(r"(```[\s\S]*?```|`[^`]+`)")
+# Fenced blocks may span lines; inline code must NOT — MDX does not treat a
+# backtick span that wraps across a newline as code, so anything multi-line is
+# left to the prose escaper (otherwise braces inside it reach MDX unescaped and
+# are parsed as JSX expressions).
+_CODE_BLOCK_PATTERN = re.compile(r"(```[\s\S]*?```|`[^`\n]+`)")
 _TYPE_ANNOTATION_PATTERN = re.compile(
     r"\b(dict|list|tuple|set|type|Optional|Union|Callable|TypeVar|Generic|Literal|Any)\["
 )
 _ANGLE_BRACKET_PATTERN = re.compile(r"<([^>]+)>")
+
+
+def _escape_mdx_text(text: str) -> str:
+    """Escape a run of non-code text so MDX can't misparse it.
+
+    Handles type-annotation brackets, angle brackets, ``TODO:`` directives, and
+    curly braces. Curly braces are MDX expression delimiters, so an unescaped
+    ``{...}`` from a docstring (e.g. a dict example) is parsed as JSX and fails.
+    """
+    # Curly braces first: they're the highest-risk MDX characters. Escaping them
+    # before the other rules keeps later replacements from inserting literal
+    # braces that we'd then miss.
+    text = text.replace("{", "\\{").replace("}", "\\}")
+    # Escape square brackets in type annotations outside code blocks
+    text = _TYPE_ANNOTATION_PATTERN.sub(r"\1\\[", text)
+    # Replace angle brackets with HTML entities to prevent MDX from parsing as tags
+    text = _ANGLE_BRACKET_PATTERN.sub(r"&lt;\1&gt;", text)
+    # Escape TODO: which can be interpreted as MDX directive
+    text = text.replace("TODO:", "TODO\\:")
+    return text
 
 
 def format_docstring_with_griffe(docstring: str, style: str = "google") -> str:
@@ -124,12 +148,7 @@ def escape_mdx_content(content: str) -> str:
         # Add the text before the code block (escaped)
         text_before = content[last_end : match.start()]
         if text_before:
-            # Escape square brackets in type annotations outside code blocks
-            text_before = _TYPE_ANNOTATION_PATTERN.sub(r"\1\\[", text_before)
-            # Replace angle brackets with HTML entities to prevent MDX from parsing as tags
-            text_before = _ANGLE_BRACKET_PATTERN.sub(r"&lt;\1&gt;", text_before)
-            # Escape TODO: which can be interpreted as MDX directive
-            text_before = text_before.replace("TODO:", "TODO\\:")
+            text_before = _escape_mdx_text(text_before)
         parts.append(text_before)
 
         # Add the code block itself (unescaped)
@@ -140,11 +159,7 @@ def escape_mdx_content(content: str) -> str:
     # Add any remaining text after the last code block (escaped)
     remaining_text = content[last_end:]
     if remaining_text:
-        remaining_text = _TYPE_ANNOTATION_PATTERN.sub(r"\1\\[", remaining_text)
-        # Replace angle brackets with HTML entities to prevent MDX from parsing as tags
-        remaining_text = _ANGLE_BRACKET_PATTERN.sub(r"&lt;\1&gt;", remaining_text)
-        # Escape TODO: which can be interpreted as MDX directive
-        remaining_text = remaining_text.replace("TODO:", "TODO\\:")
+        remaining_text = _escape_mdx_text(remaining_text)
     parts.append(remaining_text)
 
     return "".join(parts)
