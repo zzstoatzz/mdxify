@@ -6,11 +6,12 @@ import textwrap
 from griffe import Docstring
 
 # Pre-compile regex patterns for better performance
-# Fenced blocks may span lines; inline code must NOT — MDX does not treat a
-# backtick span that wraps across a newline as code, so anything multi-line is
-# left to the prose escaper (otherwise braces inside it reach MDX unescaped and
-# are parsed as JSX expressions).
-_CODE_BLOCK_PATTERN = re.compile(r"(```[\s\S]*?```|`[^`\n]+`)")
+# A fence is ``` (optionally indented, optionally with a language) on its own line.
+_FENCE_PATTERN = re.compile(r"^\s*```")
+# Inline code spans a single line only — MDX does not treat a backtick span that
+# wraps across a newline as code, so multi-line backtick content is left to the
+# prose escaper (otherwise braces inside it reach MDX unescaped and parse as JSX).
+_INLINE_CODE_PATTERN = re.compile(r"`[^`\n]+`")
 _TYPE_ANNOTATION_PATTERN = re.compile(
     r"\b(dict|list|tuple|set|type|Optional|Union|Callable|TypeVar|Generic|Literal|Any)\["
 )
@@ -136,30 +137,40 @@ def format_docstring_with_griffe(docstring: str, style: str = "google") -> str:
         return docstring
 
 
-def escape_mdx_content(content: str) -> str:
-    """Escape content for MDX to prevent parsing issues, but not inside code blocks."""
-    # Split content by code blocks to avoid escaping inside them
-    # Pattern matches both inline code (`...`) and code blocks (```...```)
+def _escape_line_outside_code(line: str) -> str:
+    """Escape a single non-fenced line, leaving single-line inline code spans alone."""
     parts = []
     last_end = 0
-
-    # Find all code blocks and inline code
-    for match in _CODE_BLOCK_PATTERN.finditer(content):
-        # Add the text before the code block (escaped)
-        text_before = content[last_end : match.start()]
-        if text_before:
-            text_before = _escape_mdx_text(text_before)
-        parts.append(text_before)
-
-        # Add the code block itself (unescaped)
-        parts.append(match.group(0))
-
+    for match in _INLINE_CODE_PATTERN.finditer(line):
+        prose = line[last_end : match.start()]
+        if prose:
+            parts.append(_escape_mdx_text(prose))
+        parts.append(match.group(0))  # inline code, verbatim
         last_end = match.end()
-
-    # Add any remaining text after the last code block (escaped)
-    remaining_text = content[last_end:]
-    if remaining_text:
-        remaining_text = _escape_mdx_text(remaining_text)
-    parts.append(remaining_text)
-
+    tail = line[last_end:]
+    if tail:
+        parts.append(_escape_mdx_text(tail))
     return "".join(parts)
+
+
+def escape_mdx_content(content: str) -> str:
+    """Escape content for MDX to prevent parsing issues, but not inside code.
+
+    Scans line by line so fenced code blocks (```` ``` ````) are tracked with a
+    simple state machine. This mirrors how MDX/CommonMark parse fences — including
+    auto-closing an unterminated fence at end of input — so braces and other
+    MDX-special characters inside code are never escaped, while everything in
+    prose is. A regex over the whole string can't do this reliably when fences
+    are unbalanced (which Griffe's Examples sections sometimes produce).
+    """
+    out = []
+    in_fence = False
+    for line in content.split("\n"):
+        if _FENCE_PATTERN.match(line):
+            in_fence = not in_fence
+            out.append(line)
+        elif in_fence:
+            out.append(line)
+        else:
+            out.append(_escape_line_outside_code(line))
+    return "\n".join(out)
