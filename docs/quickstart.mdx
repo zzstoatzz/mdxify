@@ -151,3 +151,12 @@ uvx mdxify --all --root-module mypackage \
 | `--docs-json` | Path to docs.json file for navigation updates | `docs/docs.json` |
 | `--nav-output` | Write generated navigation to a standalone JSON file (skips docs.json update) | - |
 | `--anchor-name` | Name of the navigation group to update | `SDK Reference` |
+
+<Note>
+Modules with no documentable content (no docstring, functions, or classes) are
+skipped entirely — no page is generated and they're left out of the navigation.
+Any stub left by an earlier mdxify version is removed on the next run.
+
+The old `--skip-empty-parents` flag is deprecated and ignored; this is now the
+default behavior.
+</Note>
