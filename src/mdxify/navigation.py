@@ -146,7 +146,18 @@ def build_hierarchical_navigation(
                 # This is a leaf module with no submodules
                 module_name = info["_path"]
                 filename = module_name.replace(".", "-")
-                
+
+                # A module whose only submodules are private/internal is rendered
+                # as a leaf here (its public children aren't in the tree), but the
+                # generator still wrote it as an "-__init__" page because the
+                # private submodules exist on disk. Point navigation at whichever
+                # file was actually written so we don't emit a dead link.
+                if (
+                    not (output_dir / f"{filename}.mdx").exists()
+                    and (output_dir / f"{filename}-__init__.mdx").exists()
+                ):
+                    filename = f"{filename}-__init__"
+
                 if nav_prefix:
                     nav_path = str(nav_prefix / filename).replace("\\", "/")
                 else:
