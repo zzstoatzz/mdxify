@@ -5,6 +5,7 @@ import json
 import logging
 import sys
 import time
+import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from threading import Lock
@@ -166,7 +167,8 @@ def main():
         "--skip-empty-parents",
         action="store_true",
         default=False,
-        help="Skip parent modules that only contain boilerplate (default: False)",
+        help="Deprecated and ignored: empty modules are never generated. "
+        "Kept only so existing invocations don't break.",
     )
     parser.add_argument(
         "--anchor-name",
@@ -237,6 +239,17 @@ def main():
 
     # Show version banner for easier debugging and support requests
     print(f"mdxify version {__version__}")
+
+    if args.skip_empty_parents:
+        warnings.filterwarnings(
+            "always", category=DeprecationWarning, module=r"mdxify\.cli"
+        )
+        warnings.warn(
+            "--skip-empty-parents is deprecated and ignored; "
+            "empty modules are no longer generated.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     # Configure logging based on verbosity
     if args.verbose:
@@ -472,7 +485,7 @@ def main():
                     output_file = args.output_dir / f"{module_name.replace('.', '-')}.{ext}"
 
                 file_existed = output_file.exists()
-                generate_mdx(
+                wrote = generate_mdx(
                     module_info,
                     output_file,
                     repo_url=repo_url,
@@ -482,6 +495,15 @@ def main():
                     docstring_style=docstring_style,
                     source_prefix=args.source_prefix,
                 )
+
+                if not wrote:
+                    # Empty module: no page generated (and any stale stub removed).
+                    msg = (
+                        f"[{i}/{len(modules_to_process)}] Skipping {module_name} (empty module)"
+                        if verbose
+                        else None
+                    )
+                    return (msg, None, None, "skipped", False)
 
                 module_time = time.time() - module_start
                 if verbose:

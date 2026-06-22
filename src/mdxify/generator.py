@@ -29,7 +29,8 @@ def generate_mdx(
     renderer: Optional[Renderer] = None,
     docstring_style: str = "google",
     source_prefix: Optional[str] = None,
-) -> None:
+    skip_empty: bool = True,
+) -> bool:
     """Generate MDX documentation from module info.
 
     Args:
@@ -41,6 +42,12 @@ def generate_mdx(
         renderer: The renderer to use for output
         docstring_style: The docstring style to parse ("google", "numpy", or "sphinx")
         source_prefix: Optional prefix for source paths in monorepo layouts
+        skip_empty: When True (default), modules with no documentable content are
+            not written to disk (and any existing stub file is removed) instead of
+            producing an "empty module" placeholder page.
+
+    Returns:
+        True if a file was written for this module, False if it was skipped as empty.
     """
     if renderer is None:
         renderer = MDXRenderer()
@@ -67,21 +74,28 @@ def generate_mdx(
     )
 
     if not has_content:
+        if skip_empty:
+            # Don't generate a placeholder page for empty modules; remove any
+            # stub left behind by a previous run so it stops being served.
+            if output_file.exists():
+                output_file.unlink()
+            return False
+
         lines.append(
             "*This module is empty or contains only private/internal implementations.*"
         )
         lines.append("")
         output_file.parent.mkdir(parents=True, exist_ok=True)
         new_content = "\n".join(lines)
-        
+
         # Only write if content has changed
         if output_file.exists():
             existing_content = output_file.read_text()
             if existing_content == new_content:
-                return  # No changes needed
-        
+                return True  # No changes needed
+
         output_file.write_text(new_content)
-        return
+        return True
 
     if module_info["docstring"]:
         lines.append("")
@@ -200,6 +214,7 @@ def generate_mdx(
     if output_file.exists():
         existing_content = output_file.read_text()
         if existing_content == new_content:
-            return  # No changes needed
-    
+            return True  # No changes needed
+
     output_file.write_text(new_content)
+    return True
