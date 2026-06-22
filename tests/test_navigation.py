@@ -496,3 +496,34 @@ def test_update_docs_json_with_tabs_structure(tmp_path):
     assert len(pages) == 2
     assert "python-sdk/fastmcp-client" in pages
     assert "python-sdk/fastmcp-server" in pages
+
+def test_leaf_module_points_to_init_file_when_only_private_submodules(tmp_path):
+    """A package whose only submodules are private is written as an -__init__
+    page; navigation must point at that file, not the bare leaf name.
+
+    Regression test for dead links like prefect-cli-deploy (nav) vs
+    prefect-cli-deploy-__init__.mdx (file on disk).
+    """
+    # The public module list only contains the package itself; its submodules
+    # are all private and therefore not generated.
+    modules = ["mypackage.cli.deploy"]
+
+    # On disk, the generator wrote the page with an -__init__ suffix.
+    (tmp_path / "mypackage-cli-deploy-__init__.mdx").write_text("# deploy")
+
+    result = build_hierarchical_navigation(modules, tmp_path, skip_empty_parents=False)
+
+    flat = json.dumps(result)
+    assert "mypackage-cli-deploy-__init__" in flat
+    # And not the bare (nonexistent) leaf path.
+    assert '"mypackage-cli-deploy"' not in flat
+
+
+def test_leaf_module_keeps_plain_name_when_file_present(tmp_path):
+    """A normal leaf whose plain file exists keeps the plain nav path."""
+    modules = ["mypackage.tasks"]
+    (tmp_path / "mypackage-tasks.mdx").write_text("# tasks")
+
+    result = build_hierarchical_navigation(modules, tmp_path, skip_empty_parents=False)
+    assert "mypackage-tasks" in json.dumps(result)
+    assert "mypackage-tasks-__init__" not in json.dumps(result)
