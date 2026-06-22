@@ -6,36 +6,11 @@ import textwrap
 from griffe import Docstring
 
 # Pre-compile regex patterns for better performance
-# A fence is ``` (optionally indented, optionally with a language) on its own line.
-_FENCE_PATTERN = re.compile(r"^\s*```")
-# Inline code spans a single line only — MDX does not treat a backtick span that
-# wraps across a newline as code, so multi-line backtick content is left to the
-# prose escaper (otherwise braces inside it reach MDX unescaped and parse as JSX).
-_INLINE_CODE_PATTERN = re.compile(r"`[^`\n]+`")
+_CODE_BLOCK_PATTERN = re.compile(r"(```[\s\S]*?```|`[^`]+`)")
 _TYPE_ANNOTATION_PATTERN = re.compile(
     r"\b(dict|list|tuple|set|type|Optional|Union|Callable|TypeVar|Generic|Literal|Any)\["
 )
 _ANGLE_BRACKET_PATTERN = re.compile(r"<([^>]+)>")
-
-
-def _escape_mdx_text(text: str) -> str:
-    """Escape a run of non-code text so MDX can't misparse it.
-
-    Handles type-annotation brackets, angle brackets, ``TODO:`` directives, and
-    curly braces. Curly braces are MDX expression delimiters, so an unescaped
-    ``{...}`` from a docstring (e.g. a dict example) is parsed as JSX and fails.
-    """
-    # Curly braces first: they're the highest-risk MDX characters. Escaping them
-    # before the other rules keeps later replacements from inserting literal
-    # braces that we'd then miss.
-    text = text.replace("{", "\\{").replace("}", "\\}")
-    # Escape square brackets in type annotations outside code blocks
-    text = _TYPE_ANNOTATION_PATTERN.sub(r"\1\\[", text)
-    # Replace angle brackets with HTML entities to prevent MDX from parsing as tags
-    text = _ANGLE_BRACKET_PATTERN.sub(r"&lt;\1&gt;", text)
-    # Escape TODO: which can be interpreted as MDX directive
-    text = text.replace("TODO:", "TODO\\:")
-    return text
 
 
 def format_docstring_with_griffe(docstring: str, style: str = "google") -> str:
@@ -137,40 +112,39 @@ def format_docstring_with_griffe(docstring: str, style: str = "google") -> str:
         return docstring
 
 
-def _escape_line_outside_code(line: str) -> str:
-    """Escape a single non-fenced line, leaving single-line inline code spans alone."""
+def escape_mdx_content(content: str) -> str:
+    """Escape content for MDX to prevent parsing issues, but not inside code blocks."""
+    # Split content by code blocks to avoid escaping inside them
+    # Pattern matches both inline code (`...`) and code blocks (```...```)
     parts = []
     last_end = 0
-    for match in _INLINE_CODE_PATTERN.finditer(line):
-        prose = line[last_end : match.start()]
-        if prose:
-            parts.append(_escape_mdx_text(prose))
-        parts.append(match.group(0))  # inline code, verbatim
+
+    # Find all code blocks and inline code
+    for match in _CODE_BLOCK_PATTERN.finditer(content):
+        # Add the text before the code block (escaped)
+        text_before = content[last_end : match.start()]
+        if text_before:
+            # Escape square brackets in type annotations outside code blocks
+            text_before = _TYPE_ANNOTATION_PATTERN.sub(r"\1\\[", text_before)
+            # Replace angle brackets with HTML entities to prevent MDX from parsing as tags
+            text_before = _ANGLE_BRACKET_PATTERN.sub(r"&lt;\1&gt;", text_before)
+            # Escape TODO: which can be interpreted as MDX directive
+            text_before = text_before.replace("TODO:", "TODO\\:")
+        parts.append(text_before)
+
+        # Add the code block itself (unescaped)
+        parts.append(match.group(0))
+
         last_end = match.end()
-    tail = line[last_end:]
-    if tail:
-        parts.append(_escape_mdx_text(tail))
+
+    # Add any remaining text after the last code block (escaped)
+    remaining_text = content[last_end:]
+    if remaining_text:
+        remaining_text = _TYPE_ANNOTATION_PATTERN.sub(r"\1\\[", remaining_text)
+        # Replace angle brackets with HTML entities to prevent MDX from parsing as tags
+        remaining_text = _ANGLE_BRACKET_PATTERN.sub(r"&lt;\1&gt;", remaining_text)
+        # Escape TODO: which can be interpreted as MDX directive
+        remaining_text = remaining_text.replace("TODO:", "TODO\\:")
+    parts.append(remaining_text)
+
     return "".join(parts)
-
-
-def escape_mdx_content(content: str) -> str:
-    """Escape content for MDX to prevent parsing issues, but not inside code.
-
-    Scans line by line so fenced code blocks (```` ``` ````) are tracked with a
-    simple state machine. This mirrors how MDX/CommonMark parse fences — including
-    auto-closing an unterminated fence at end of input — so braces and other
-    MDX-special characters inside code are never escaped, while everything in
-    prose is. A regex over the whole string can't do this reliably when fences
-    are unbalanced (which Griffe's Examples sections sometimes produce).
-    """
-    out = []
-    in_fence = False
-    for line in content.split("\n"):
-        if _FENCE_PATTERN.match(line):
-            in_fence = not in_fence
-            out.append(line)
-        elif in_fence:
-            out.append(line)
-        else:
-            out.append(_escape_line_outside_code(line))
-    return "\n".join(out)
