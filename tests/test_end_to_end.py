@@ -54,10 +54,64 @@ def test_package(tmp_path):
             return text[:width]
     '''))
     
+    # Create an empty leaf module (only private/internal content, no public API)
+    (pkg_dir / "constants.py").write_text(dedent('''
+        _PRIVATE = 1
+    '''))
+
     # Add the test package to Python path
     sys.path.insert(0, str(tmp_path))
     yield pkg_dir
     sys.path.remove(str(tmp_path))
+
+
+def _pages_to_strings(pages):
+    """Flatten a Mintlify pages list (strings and {group, pages} dicts) to strings."""
+    out = []
+    for page in pages:
+        if isinstance(page, dict):
+            out.extend(_pages_to_strings(page.get("pages", [])))
+        else:
+            out.append(str(page))
+    return out
+
+
+@pytest.mark.parametrize("extra_args", [[], ["--include-inheritance"]])
+def test_empty_module_excluded_from_files_and_nav(test_package, tmp_path, extra_args):
+    """Empty modules must not be generated as files OR left in navigation.
+
+    Regression test for empty leaf modules surviving in docs.json — covers both
+    the parallel worker path and the --include-inheritance path.
+    """
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    docs_json = docs_dir / "docs.json"
+    docs_json.write_text(json.dumps({
+        "navigation": {
+            "anchors": [
+                {"anchor": "SDK Reference", "pages": [{"$mdxify": "generated"}]}
+            ]
+        }
+    }, indent=2))
+
+    result = subprocess.run(
+        [sys.executable, "-m", "mdxify", "--all", "--root-module", "mypkg",
+         "--output-dir", str(docs_dir / "python-sdk")] + extra_args,
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, f"mdxify failed: {result.stderr}"
+
+    # No file generated for the empty module.
+    assert not (docs_dir / "python-sdk" / "mypkg-constants.mdx").exists()
+
+    # And no dangling navigation entry pointing at it.
+    pages = json.loads(docs_json.read_text())["navigation"]["anchors"][0]["pages"]
+    flat = _pages_to_strings(pages)
+    assert not any("mypkg-constants" in p for p in flat), flat
+    # Sanity: the non-empty module is present.
+    assert any("mypkg-core" in p for p in flat), flat
 
 
 def test_cli_default_output_directory(test_package, tmp_path):

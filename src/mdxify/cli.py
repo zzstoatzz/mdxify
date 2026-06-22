@@ -419,7 +419,7 @@ def main():
                     else:
                         output_file = args.output_dir / f"{module_name.replace('.', '-')}.{ext}"
 
-                    generate_mdx(
+                    wrote = generate_mdx(
                         module_info,
                         output_file,
                         repo_url=repo_url,
@@ -429,6 +429,13 @@ def main():
                         docstring_style=args.docstring_style,
                         source_prefix=args.source_prefix,
                     )
+
+                    if not wrote:
+                        # Empty module: no page generated, so keep it out of
+                        # navigation as well.
+                        if args.verbose:
+                            print(f"Skipping {module_name} (empty module)")
+                        continue
 
                     generated_modules.append(module_name)
                     if args.verbose:
