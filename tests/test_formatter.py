@@ -42,6 +42,43 @@ def test_escape_mdx_content_handles_todo():
     assert "TODO\\:" in result
 
 
+def test_escape_mdx_content_escapes_curly_braces():
+    """Curly braces outside code must be escaped so MDX doesn't parse them as JSX.
+
+    Regression test for docstrings containing dict examples like
+    {"python_params": ["a", "b"]}, which broke Mintlify's MDX parser.
+    """
+    content = 'For example {"python_params": ["john doe", "35"]} cannot exceed.'
+    result = escape_mdx_content(content)
+    assert "\\{" in result
+    assert "\\}" in result
+    # No bare brace should remain (which MDX would treat as an expression).
+    assert "{" not in result.replace("\\{", "")
+    assert "}" not in result.replace("\\}", "")
+
+
+def test_escape_mdx_content_preserves_braces_in_code():
+    """Braces inside inline code / code fences must be left untouched."""
+    content = 'Use `{"a": 1}` inline.\n\n```python\nd = {"a": 1}\n```\n'
+    result = escape_mdx_content(content)
+    assert '`{"a": 1}`' in result
+    assert 'd = {"a": 1}' in result
+    assert "\\{" not in result
+
+
+def test_escape_mdx_content_escapes_braces_in_multiline_inline_span():
+    """A backtick span that wraps across a newline is NOT inline code in MDX, so
+    its braces must still be escaped (otherwise MDX parses them as JSX).
+
+    Regression test for prefect_databricks-jobs.mdx, which failed Mintlify's
+    parser with "Could not parse expression".
+    """
+    content = "for example `'sql_params'\\:\n{'name'\\: 'john doe'}`. The task"
+    result = escape_mdx_content(content)
+    assert "\\{" in result
+    assert "\\}" in result
+
+
 def test_format_docstring_with_griffe_simple():
     """Test formatting a simple docstring."""
     docstring = """
