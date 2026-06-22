@@ -66,6 +66,19 @@ def test_escape_mdx_content_preserves_braces_in_code():
     assert "\\{" not in result
 
 
+def test_escape_mdx_content_unterminated_fence_keeps_code_unescaped():
+    """An unterminated ```python fence (as Griffe Examples sometimes emit) must
+    still be treated as code through end of input — braces left untouched.
+
+    Regression test for prefect-flows.mdx, where `print(f"hello {name}")` inside
+    an unclosed example fence was being escaped to `\\{name\\}`.
+    """
+    content = 'Example:\n\n```python\n@flow\ndef my_flow(name):\n    print(f"hello {name}")\n'
+    result = escape_mdx_content(content)
+    assert 'print(f"hello {name}")' in result
+    assert "\\{name\\}" not in result
+
+
 def test_escape_mdx_content_escapes_braces_in_multiline_inline_span():
     """A backtick span that wraps across a newline is NOT inline code in MDX, so
     its braces must still be escaped (otherwise MDX parses them as JSX).
