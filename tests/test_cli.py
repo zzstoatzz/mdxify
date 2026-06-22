@@ -281,3 +281,11 @@ def test_include_internal():
         
         # Should have processed 4 modules total
         assert len(processed_modules) == 4
+
+
+def test_skip_empty_parents_is_deprecated():
+    """--skip-empty-parents is accepted but emits a DeprecationWarning."""
+    with patch.object(sys, "argv", ["mdxify", "--skip-empty-parents", "nonexistent_pkg_xyz"]):
+        with pytest.warns(DeprecationWarning, match="--skip-empty-parents is deprecated"):
+            with pytest.raises(SystemExit):
+                main()

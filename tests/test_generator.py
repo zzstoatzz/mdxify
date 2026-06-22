@@ -41,8 +41,8 @@ This module has content.
     assert is_module_empty(mdx_file) is False
 
 
-def test_generate_mdx_empty_module(tmp_path):
-    """Test generating MDX for an empty module."""
+def test_generate_mdx_empty_module_skipped_by_default(tmp_path):
+    """Empty modules are not written to disk by default."""
     module_info = {
         "name": "test.empty",
         "docstring": "",
@@ -50,10 +50,49 @@ def test_generate_mdx_empty_module(tmp_path):
         "classes": [],
         "source_file": "/path/to/file.py"
     }
-    
+
     output_file = tmp_path / "test-empty.mdx"
-    generate_mdx(module_info, output_file)
-    
+    wrote = generate_mdx(module_info, output_file)
+
+    assert wrote is False
+    assert not output_file.exists()
+
+
+def test_generate_mdx_empty_module_removes_existing_stub(tmp_path):
+    """A stub left by a previous run is removed when the module is empty."""
+    module_info = {
+        "name": "test.empty",
+        "docstring": "",
+        "functions": [],
+        "classes": [],
+        "source_file": "/path/to/file.py"
+    }
+
+    output_file = tmp_path / "test-empty.mdx"
+    output_file.write_text(
+        "*This module is empty or contains only private/internal implementations.*"
+    )
+
+    wrote = generate_mdx(module_info, output_file)
+
+    assert wrote is False
+    assert not output_file.exists()
+
+
+def test_generate_mdx_empty_module_opt_out(tmp_path):
+    """With skip_empty=False the placeholder page is still written."""
+    module_info = {
+        "name": "test.empty",
+        "docstring": "",
+        "functions": [],
+        "classes": [],
+        "source_file": "/path/to/file.py"
+    }
+
+    output_file = tmp_path / "test-empty.mdx"
+    wrote = generate_mdx(module_info, output_file, skip_empty=False)
+
+    assert wrote is True
     content = output_file.read_text()
     assert "title: empty" in content
     assert "*This module is empty or contains only private/internal implementations.*" in content
