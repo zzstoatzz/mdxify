@@ -29,6 +29,42 @@ uvx mdxify --all --root-module mypackage --output-dir docs/python-sdk
 - Automatic hierarchical navigation (Mintlify)
 - Google-style docstrings via Griffe
 - Smart filtering of private modules
+- Properties documented as attributes, with read/write access labels
+- Explicit static/class-method labels and caller-facing class-method signatures
+
+### Class Members
+
+Properties appear once under **Properties**, before **Methods**, using the
+getter's return annotation rather than a callable signature. For example:
+
+````markdown
+**Properties:**
+
+#### `name`
+
+```python
+name: str
+```
+
+*Read/write.*
+````
+
+A property without a setter is labeled read-only; a deleter adds a deletable
+label. Getter documentation and any setter/deleter documentation stay together
+in the property entry. Without a getter annotation, only the property name is
+shown. Class-docstring **Attributes** descriptions remain available separately.
+
+Static and class methods stay under **Methods** with explicit kind labels.
+Class-method signatures omit the implicit receiver (`cls`); static-method
+arguments and instance-method signatures retain their parameters. These member
+presentations work in both MDX and Markdown, including directly inherited
+members when `--include-inheritance` is enabled.
+
+Decorator recognition supports the conventional `@property`, `@staticmethod`,
+and `@classmethod` names (also qualified with `builtins`), and same-name local
+property accessors such as `@name.setter`. It does not resolve decorator aliases,
+custom descriptors, cached properties, or accessor extensions such as
+`@Base.name.setter`.
 
 ## Development
 

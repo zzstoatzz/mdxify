@@ -166,6 +166,48 @@ def generate_mdx(
                 lines.append(renderer.escape(formatted_docstring))
                 lines.append("")
 
+            if cls.get("properties"):
+                lines.extend(["**Properties:**", ""])
+                for prop in cls["properties"]:
+                    property_source_link = None
+                    if repo_url and "line" in prop:
+                        source_file = prop.get("source_file", module_info.get("source_file"))
+                        if source_file:
+                            property_source_link = generate_source_link(
+                                repo_url,
+                                branch,
+                                Path(source_file),
+                                prop["line"],
+                                root_module,
+                                source_prefix,
+                            )
+                    header = f"#### `{prop['name']}`"
+                    lines.append(renderer.header_with_source(header, property_source_link))
+                    declaration = prop["name"]
+                    if prop.get("annotation"):
+                        declaration += f": {prop['annotation']}"
+                    lines.extend(["", "```python", declaration, "```", ""])
+                    access = "Read/write" if prop.get("has_setter") else "Read-only"
+                    if prop.get("has_deleter"):
+                        access += "; deletable"
+                    lines.extend([f"*{access}.*", ""])
+
+                    if prop["docstring"]:
+                        formatted_docstring = format_docstring_with_griffe(
+                            prop["docstring"], docstring_style
+                        )
+                        lines.extend([renderer.escape(formatted_docstring), ""])
+                    for accessor in ("setter", "deleter"):
+                        docstring = prop.get(f"{accessor}_docstring", "")
+                        if docstring:
+                            formatted_docstring = format_docstring_with_griffe(
+                                docstring, docstring_style
+                            )
+                            lines.extend([
+                                f"**{accessor.title()}:**", "",
+                                renderer.escape(formatted_docstring), "",
+                            ])
+
             if cls["methods"]:
                 lines.append("**Methods:**")
                 lines.append("")
@@ -194,6 +236,9 @@ def generate_mdx(
                     method_header_with_link = renderer.header_with_source(method_header, method_source_link)
                     lines.append(method_header_with_link)
                     lines.append("")
+                    kind = method.get("kind", "instance")
+                    if kind in {"static", "class"}:
+                        lines.extend([f"*{kind.title()} method.*", ""])
                     lines.append("```python")
                     lines.append(method["signature"])
                     lines.append("```")

@@ -1,8 +1,128 @@
 """Tests for the generator module."""
 
+from textwrap import dedent
 
+import pytest
 
 from mdxify.generator import generate_mdx, is_module_empty
+from mdxify.parser import parse_module_fast
+from mdxify.renderers import MarkdownRenderer, MDXRenderer
+
+
+@pytest.mark.parametrize("renderer", [MDXRenderer(), MarkdownRenderer()], ids=["mdx", "md"])
+def test_generate_property_and_method_kinds(tmp_path, renderer):
+    source = tmp_path / "mre.py"
+    source.write_text(dedent('''
+        class Thing:
+            """A thing.
+
+            Attributes:
+                name (str): The documented attribute.
+            """
+            @property
+            def name(self) -> str:
+                """The name."""
+            @name.setter
+            def name(self, value):
+                """Set the name."""
+            @staticmethod
+            def sm(x: int) -> int:
+                """Static."""
+            @classmethod
+            def cm(cls) -> "Thing":
+                """Class method."""
+            def ordinary(self):
+                """Instance method."""
+    '''))
+    output = tmp_path / f"mre.{renderer.file_extension}"
+    assert generate_mdx(parse_module_fast("mre", source), output, renderer=renderer) is True
+    content = output.read_text()
+    assert content.count("#### `name`") == 1
+    assert content.index("**Properties:**") < content.index("**Methods:**")
+    assert "**Attributes:**" in content and "The documented attribute." in content
+    assert "```python\nname: str\n```" in content
+    assert "*Read/write.*" in content
+    assert "The name." in content
+    assert "**Setter:**" in content and "Set the name." in content
+    assert "name(self" not in content
+    assert "#### `sm`\n\n*Static method.*\n\n```python\nsm(x: int) -> int\n```" in content
+    assert "#### `cm`\n\n*Class method.*\n\n```python\ncm() -> 'Thing'\n```" in content
+    assert "#### `ordinary`\n\n```python\nordinary(self)\n```" in content
+
+
+@pytest.mark.parametrize("setter,deleter,label", [
+    (False, False, "*Read-only.*"),
+    (True, False, "*Read/write.*"),
+    (False, True, "*Read-only; deletable.*"),
+    (True, True, "*Read/write; deletable.*"),
+])
+def test_property_output_variants(tmp_path, setter, deleter, label):
+    prop = {
+        "name": "name", "annotation": None, "docstring": "Get name.",
+        "has_setter": setter, "has_deleter": deleter,
+        "setter_docstring": "Set name." if setter else "",
+        "deleter_docstring": "Delete name." if deleter else "",
+    }
+    module = {"name": "mre", "docstring": "", "functions": [], "classes": [
+        {"name": "Thing", "docstring": "", "properties": [prop], "methods": []},
+    ]}
+    output = tmp_path / "mre.mdx"
+    generate_mdx(module, output)
+    content = output.read_text()
+    assert "**Properties:**" in content
+    assert "**Methods:**" not in content
+    assert "```python\nname\n```" in content
+    assert label in content
+    assert "Get name." in content
+    assert ("**Setter:**" in content) is setter
+    assert ("**Deleter:**" in content) is deleter
+    assert ("Set name." in content) is setter
+    assert ("Delete name." in content) is deleter
+
+
+@pytest.mark.parametrize("renderer,escaped", [
+    (MDXRenderer(), "&lt;value&gt;"), (MarkdownRenderer(), "<value>"),
+], ids=["mdx", "md"])
+def test_property_source_links_and_escaping(tmp_path, renderer, escaped):
+    src = tmp_path / "src" / "sample"
+    src.mkdir(parents=True)
+    source = src / "child.py"
+    source.write_text("")
+    base_source = src / "base.py"
+    base_source.write_text("")
+    module = {"name": "sample.child", "docstring": "", "functions": [], "source_file": str(source), "classes": [
+        {"name": "Child", "docstring": "", "methods": [], "properties": [
+            {"name": "local", "annotation": "list[str]", "line": 5,
+             "docstring": "Getter <value> and `{name}`.", "has_setter": True, "has_deleter": True,
+             "setter_docstring": "Set <value>.\n\nArgs:\n    value (str): New `{name}`.",
+             "deleter_docstring": "Delete <value>."},
+            {"name": "inherited", "annotation": "str", "line": 9, "docstring": "Base property.",
+             "has_setter": False, "has_deleter": False, "is_inherited": True,
+             "source_file": str(base_source)},
+        ]},
+    ]}
+    output = tmp_path / f"result.{renderer.file_extension}"
+    generate_mdx(module, output, renderer=renderer, repo_url="https://github.com/test/repo", root_module="sample")
+    content = output.read_text()
+    assert "https://github.com/test/repo/blob/main/src/sample/child.py#L5" in content
+    assert "https://github.com/test/repo/blob/main/src/sample/base.py#L9" in content
+    assert f"Getter {escaped} and `{{name}}`." in content
+    assert f"Set {escaped}." in content
+    assert f"Delete {escaped}." in content
+    assert "**Args:**" in content
+    assert "- `value`: New `{name}`." in content
+    assert "```python\nlocal: list[str]\n```" in content
+
+
+@pytest.mark.parametrize("properties", [None, []])
+def test_empty_property_section_omitted(tmp_path, properties):
+    cls = {"name": "Thing", "docstring": "", "methods": []}
+    if properties is not None:
+        cls["properties"] = properties
+    module = {"name": "mre", "docstring": "", "functions": [], "classes": [cls]}
+    output = tmp_path / "mre.mdx"
+    generate_mdx(module, output)
+    assert "**Properties:**" not in output.read_text()
 
 
 def test_is_module_empty_detects_empty_content(tmp_path):
