@@ -12,7 +12,7 @@ from threading import Lock
 
 from ._version import __version__
 from .discovery import find_all_modules, get_module_source_file, should_include_module
-from .generator import generate_mdx
+from .generator import SECTION_ORDERS, generate_mdx
 from .navigation import update_docs_json
 from .parser import parse_module_fast, parse_modules_with_inheritance
 from .renderers import get_renderer
@@ -234,6 +234,13 @@ def main():
         default="google",
         help="Docstring style to parse: 'google' (default), 'numpy', or 'sphinx'",
     )
+    parser.add_argument(
+        "--section-order",
+        choices=list(SECTION_ORDERS),
+        default="functions-first",
+        help="Order of the Functions and Classes sections on each module page: "
+        "'functions-first' (default) or 'classes-first'",
+    )
 
     args = parser.parse_args()
 
@@ -428,6 +435,7 @@ def main():
                         renderer=renderer,
                         docstring_style=args.docstring_style,
                         source_prefix=args.source_prefix,
+                        section_order=args.section_order,
                     )
 
                     if not wrote:
@@ -454,8 +462,9 @@ def main():
             args.include_inheritance = False
 
     else:
-        # Capture docstring_style for use in process_module closure
+        # Capture docstring_style and section_order for use in process_module closure
         docstring_style = args.docstring_style
+        section_order = args.section_order
 
         def process_module(module_data):
             """Process a single module."""
@@ -501,6 +510,7 @@ def main():
                     renderer=renderer,
                     docstring_style=docstring_style,
                     source_prefix=args.source_prefix,
+                    section_order=section_order,
                 )
 
                 if not wrote:

@@ -76,6 +76,58 @@ def _pages_to_strings(pages):
     return out
 
 
+@pytest.mark.parametrize("include_inheritance", [False, True])
+@pytest.mark.parametrize("output_format", ["mdx", "md"])
+def test_cli_decorator_aware_members(test_package, tmp_path, include_inheritance, output_format):
+    (test_package / "members.py").write_text(dedent('''
+        class Thing:
+            """A thing."""
+            @property
+            def name(self) -> str:
+                """The name."""
+                return "n"
+            @name.setter
+            def name(self, value: str) -> None:
+                """Set the name."""
+            @staticmethod
+            def sm(x: int) -> int:
+                """Static."""
+                return x
+            @classmethod
+            def cm(cls) -> "Thing":
+                """Class method."""
+                return cls()
+        class Child(Thing):
+            """A child."""
+    '''))
+    output = tmp_path / "generated"
+    args = [sys.executable, "-m", "mdxify", "mypkg.members",
+            "--output-dir", str(output), "--no-update-nav", "--format", output_format]
+    if include_inheritance:
+        args.append("--include-inheritance")
+    result = subprocess.run(args, cwd=tmp_path, capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    content = (output / f"mypkg-members.{output_format}").read_text()
+    thing, child = content.split("### `Child`", 1)
+    assert thing.count("#### `name`") == 1
+    assert "```python\nname: str\n```" in thing
+    assert "*Read/write.*" in thing
+    assert "**Setter:**" in thing and "Set the name." in thing
+    assert "*Static method.*" in thing and "sm(x: int) -> int" in thing
+    assert "*Class method.*" in thing and "cm() -> 'Thing'" in thing
+    assert "name(self" not in content
+    assert "cm(cls" not in content
+    if include_inheritance:
+        assert child.count("#### `name`") == 1
+        assert "name: str" in child
+        assert "*Read/write.*" in child
+        assert "Set the name." in child
+        assert "*Static method.*" in child and "*Class method.*" in child
+    else:
+        assert "**Properties:**" not in child
+        assert "**Methods:**" not in child
+
+
 @pytest.mark.parametrize("extra_args", [[], ["--include-inheritance"]])
 def test_empty_module_excluded_from_files_and_nav(test_package, tmp_path, extra_args):
     """Empty modules must not be generated as files OR left in navigation.

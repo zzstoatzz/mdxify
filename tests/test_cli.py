@@ -289,3 +289,66 @@ def test_skip_empty_parents_is_deprecated():
         with pytest.warns(DeprecationWarning, match="--skip-empty-parents is deprecated"):
             with pytest.raises(SystemExit):
                 main()
+
+
+@pytest.mark.parametrize(
+    ("extra_args", "expected_order"),
+    [
+        ([], "functions-first"),
+        (["--section-order", "functions-first"], "functions-first"),
+        (["--section-order", "classes-first"], "classes-first"),
+    ],
+)
+def test_section_order_passed_to_generator(extra_args, expected_order):
+    """--section-order reaches generate_mdx on the default code path."""
+    with patch("mdxify.cli.find_all_modules") as mock_find, \
+         patch("mdxify.cli.get_module_source_file") as mock_source, \
+         patch("mdxify.cli.parse_module_fast") as mock_parse, \
+         patch("mdxify.cli.generate_mdx") as mock_generate, \
+         patch.object(sys, "argv", ["mdxify", "mypackage.core", "--no-update-nav", *extra_args]):
+
+        mock_find.return_value = []
+        mock_source.return_value = Path("mypackage/core.py")
+        mock_parse.return_value = {"name": "mypackage.core", "docstring": "Test"}
+
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+
+        assert exc_info.value.code == 0
+        mock_generate.assert_called_once()
+        assert mock_generate.call_args.kwargs["section_order"] == expected_order
+
+
+def test_section_order_passed_to_generator_with_inheritance():
+    """--section-order reaches generate_mdx on the --include-inheritance code path."""
+    with patch("mdxify.cli.find_all_modules") as mock_find, \
+         patch("mdxify.cli.parse_modules_with_inheritance") as mock_parse_inheritance, \
+         patch("mdxify.cli.generate_mdx") as mock_generate, \
+         patch.object(sys, "argv", [
+             "mdxify", "mypackage.core", "--no-update-nav",
+             "--include-inheritance", "--section-order", "classes-first",
+         ]):
+
+        mock_find.return_value = []
+        mock_parse_inheritance.return_value = {
+            "mypackage.core": {"name": "mypackage.core", "docstring": "Test"}
+        }
+
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+
+        assert exc_info.value.code == 0
+        mock_generate.assert_called_once()
+        assert mock_generate.call_args.kwargs["section_order"] == "classes-first"
+
+
+def test_section_order_rejects_unknown_value(capsys):
+    """An unknown --section-order value exits with an error listing the valid values."""
+    with patch.object(sys, "argv", ["mdxify", "mypackage.core", "--section-order", "foo"]):
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+
+    assert exc_info.value.code == 2
+    err = capsys.readouterr().err
+    assert "functions-first" in err
+    assert "classes-first" in err

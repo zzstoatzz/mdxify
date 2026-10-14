@@ -7,6 +7,8 @@ from .formatter import format_docstring_with_griffe
 from .renderers import MDXRenderer, Renderer
 from .source_links import generate_source_link
 
+SECTION_ORDERS = ("functions-first", "classes-first")
+
 
 def is_module_empty(module_path: Path) -> bool:
     """Check if a module documentation file indicates it's empty."""
@@ -20,6 +22,185 @@ def is_module_empty(module_path: Path) -> bool:
     )
 
 
+def _render_functions_section(
+    module_info: dict[str, Any],
+    renderer: Renderer,
+    repo_url: Optional[str],
+    branch: str,
+    root_module: Optional[str],
+    docstring_style: str,
+    source_prefix: Optional[str],
+) -> list[str]:
+    """Render the `## Functions` section, or nothing if the module has no functions."""
+    lines: list[str] = []
+    if not module_info["functions"]:
+        return lines
+
+    lines.append("## Functions")
+    lines.append("")
+
+    for func in module_info["functions"]:
+        # Generate source link if possible
+        source_link = None
+        if repo_url and "source_file" in module_info and "line" in func:
+            source_link = generate_source_link(
+                repo_url,
+                branch,
+                Path(module_info["source_file"]),
+                func["line"],
+                root_module,
+                source_prefix,
+            )
+        
+        header = f"### `{func['name']}`"
+        header_with_link = renderer.header_with_source(header, source_link)
+        lines.append(header_with_link)
+        lines.append("")
+        lines.append("```python")
+        lines.append(func["signature"])
+        lines.append("```")
+        lines.append("")
+
+        if func["docstring"]:
+            lines.append("")
+            # Format docstring with Griffe
+            formatted_docstring = format_docstring_with_griffe(func["docstring"], docstring_style)
+            lines.append(renderer.escape(formatted_docstring))
+            lines.append("")
+
+    return lines
+
+
+def _render_classes_section(
+    module_info: dict[str, Any],
+    renderer: Renderer,
+    repo_url: Optional[str],
+    branch: str,
+    root_module: Optional[str],
+    docstring_style: str,
+    source_prefix: Optional[str],
+) -> list[str]:
+    """Render the `## Classes` section, or nothing if the module has no classes."""
+    lines: list[str] = []
+    if not module_info["classes"]:
+        return lines
+
+    lines.append("## Classes")
+    lines.append("")
+
+    for cls in module_info["classes"]:
+        # Generate source link if possible
+        source_link = None
+        if repo_url and "source_file" in module_info and "line" in cls:
+            source_link = generate_source_link(
+                repo_url,
+                branch,
+                Path(module_info["source_file"]),
+                cls["line"],
+                root_module,
+                source_prefix,
+            )
+        
+        header = f"### `{cls['name']}`"
+        header_with_link = renderer.header_with_source(header, source_link)
+        lines.append(header_with_link)
+        lines.append("")
+
+        if cls["docstring"]:
+            lines.append("")
+            # Format docstring with Griffe
+            formatted_docstring = format_docstring_with_griffe(cls["docstring"], docstring_style)
+            lines.append(renderer.escape(formatted_docstring))
+            lines.append("")
+
+        if cls.get("properties"):
+            lines.extend(["**Properties:**", ""])
+            for prop in cls["properties"]:
+                property_source_link = None
+                if repo_url and "line" in prop:
+                    source_file = prop.get("source_file", module_info.get("source_file"))
+                    if source_file:
+                        property_source_link = generate_source_link(
+                            repo_url,
+                            branch,
+                            Path(source_file),
+                            prop["line"],
+                            root_module,
+                            source_prefix,
+                        )
+                header = f"#### `{prop['name']}`"
+                lines.append(renderer.header_with_source(header, property_source_link))
+                declaration = prop["name"]
+                if prop.get("annotation"):
+                    declaration += f": {prop['annotation']}"
+                lines.extend(["", "```python", declaration, "```", ""])
+                access = "Read/write" if prop.get("has_setter") else "Read-only"
+                if prop.get("has_deleter"):
+                    access += "; deletable"
+                lines.extend([f"*{access}.*", ""])
+
+                if prop["docstring"]:
+                    formatted_docstring = format_docstring_with_griffe(
+                        prop["docstring"], docstring_style
+                    )
+                    lines.extend([renderer.escape(formatted_docstring), ""])
+                for accessor in ("setter", "deleter"):
+                    docstring = prop.get(f"{accessor}_docstring", "")
+                    if docstring:
+                        formatted_docstring = format_docstring_with_griffe(
+                            docstring, docstring_style
+                        )
+                        lines.extend([
+                            f"**{accessor.title()}:**", "",
+                            renderer.escape(formatted_docstring), "",
+                        ])
+
+        if cls["methods"]:
+            lines.append("**Methods:**")
+            lines.append("")
+
+            for method in cls["methods"]:
+                # Generate source link if possible
+                method_source_link = None
+                if repo_url and "line" in method:
+                    # For inherited methods, use the source file from the method itself
+                    # For regular methods, use the module's source file
+                    source_file = method.get("source_file", module_info.get("source_file"))
+                    if source_file:
+                        method_source_link = generate_source_link(
+                            repo_url,
+                            branch,
+                            Path(source_file),
+                            method["line"],
+                            root_module,
+                            source_prefix,
+                        )
+                
+                # Add inherited indicator if this is an inherited method
+                method_name = method["name"]
+                
+                method_header = f"#### `{method_name}`"
+                method_header_with_link = renderer.header_with_source(method_header, method_source_link)
+                lines.append(method_header_with_link)
+                lines.append("")
+                kind = method.get("kind", "instance")
+                if kind in {"static", "class"}:
+                    lines.extend([f"*{kind.title()} method.*", ""])
+                lines.append("```python")
+                lines.append(method["signature"])
+                lines.append("```")
+                lines.append("")
+
+                if method["docstring"]:
+                    formatted_docstring = format_docstring_with_griffe(
+                        method["docstring"], docstring_style
+                    )
+                    lines.append(renderer.escape(formatted_docstring))
+                    lines.append("")
+
+    return lines
+
+
 def generate_mdx(
     module_info: dict[str, Any],
     output_file: Path,
@@ -30,6 +211,7 @@ def generate_mdx(
     docstring_style: str = "google",
     source_prefix: Optional[str] = None,
     skip_empty: bool = True,
+    section_order: str = "functions-first",
 ) -> bool:
     """Generate MDX documentation from module info.
 
@@ -45,10 +227,18 @@ def generate_mdx(
         skip_empty: When True (default), modules with no documentable content are
             not written to disk (and any existing stub file is removed) instead of
             producing an "empty module" placeholder page.
+        section_order: Order of the Functions and Classes sections on the page:
+            "functions-first" (default) or "classes-first".
 
     Returns:
         True if a file was written for this module, False if it was skipped as empty.
     """
+    if section_order not in SECTION_ORDERS:
+        raise ValueError(
+            f"Invalid section_order {section_order!r}; expected one of: "
+            + ", ".join(SECTION_ORDERS)
+        )
+
     if renderer is None:
         renderer = MDXRenderer()
 
@@ -102,109 +292,23 @@ def generate_mdx(
         lines.append(renderer.escape(module_info["docstring"]))
         lines.append("")
 
-    # Functions
-    if module_info["functions"]:
-        lines.append("## Functions")
-        lines.append("")
-
-        for func in module_info["functions"]:
-            # Generate source link if possible
-            source_link = None
-            if repo_url and "source_file" in module_info and "line" in func:
-                source_link = generate_source_link(
-                    repo_url,
-                    branch,
-                    Path(module_info["source_file"]),
-                    func["line"],
-                    root_module,
-                    source_prefix,
-                )
-            
-            header = f"### `{func['name']}`"
-            header_with_link = renderer.header_with_source(header, source_link)
-            lines.append(header_with_link)
-            lines.append("")
-            lines.append("```python")
-            lines.append(func["signature"])
-            lines.append("```")
-            lines.append("")
-
-            if func["docstring"]:
-                lines.append("")
-                # Format docstring with Griffe
-                formatted_docstring = format_docstring_with_griffe(func["docstring"], docstring_style)
-                lines.append(renderer.escape(formatted_docstring))
-                lines.append("")
-
-    # Classes
-    if module_info["classes"]:
-        lines.append("## Classes")
-        lines.append("")
-
-        for cls in module_info["classes"]:
-            # Generate source link if possible
-            source_link = None
-            if repo_url and "source_file" in module_info and "line" in cls:
-                source_link = generate_source_link(
-                    repo_url,
-                    branch,
-                    Path(module_info["source_file"]),
-                    cls["line"],
-                    root_module,
-                    source_prefix,
-                )
-            
-            header = f"### `{cls['name']}`"
-            header_with_link = renderer.header_with_source(header, source_link)
-            lines.append(header_with_link)
-            lines.append("")
-
-            if cls["docstring"]:
-                lines.append("")
-                # Format docstring with Griffe
-                formatted_docstring = format_docstring_with_griffe(cls["docstring"], docstring_style)
-                lines.append(renderer.escape(formatted_docstring))
-                lines.append("")
-
-            if cls["methods"]:
-                lines.append("**Methods:**")
-                lines.append("")
-
-                for method in cls["methods"]:
-                    # Generate source link if possible
-                    method_source_link = None
-                    if repo_url and "line" in method:
-                        # For inherited methods, use the source file from the method itself
-                        # For regular methods, use the module's source file
-                        source_file = method.get("source_file", module_info.get("source_file"))
-                        if source_file:
-                            method_source_link = generate_source_link(
-                                repo_url,
-                                branch,
-                                Path(source_file),
-                                method["line"],
-                                root_module,
-                                source_prefix,
-                            )
-                    
-                    # Add inherited indicator if this is an inherited method
-                    method_name = method["name"]
-                    
-                    method_header = f"#### `{method_name}`"
-                    method_header_with_link = renderer.header_with_source(method_header, method_source_link)
-                    lines.append(method_header_with_link)
-                    lines.append("")
-                    lines.append("```python")
-                    lines.append(method["signature"])
-                    lines.append("```")
-                    lines.append("")
-
-                    if method["docstring"]:
-                        formatted_docstring = format_docstring_with_griffe(
-                            method["docstring"], docstring_style
-                        )
-                        lines.append(renderer.escape(formatted_docstring))
-                        lines.append("")
+    section_args = (
+        module_info,
+        renderer,
+        repo_url,
+        branch,
+        root_module,
+        docstring_style,
+        source_prefix,
+    )
+    functions_section = _render_functions_section(*section_args)
+    classes_section = _render_classes_section(*section_args)
+    if section_order == "classes-first":
+        lines.extend(classes_section)
+        lines.extend(functions_section)
+    else:
+        lines.extend(functions_section)
+        lines.extend(classes_section)
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
     new_content = "\n".join(lines)
