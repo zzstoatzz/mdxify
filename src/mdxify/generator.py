@@ -1,7 +1,7 @@
 """MDX documentation generation."""
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from .formatter import format_docstring_with_griffe
 from .renderers import MDXRenderer, Renderer
@@ -23,12 +23,12 @@ def is_module_empty(module_path: Path) -> bool:
 def generate_mdx(
     module_info: dict[str, Any],
     output_file: Path,
-    repo_url: Optional[str] = None,
+    repo_url: str | None = None,
     branch: str = "main",
-    root_module: Optional[str] = None,
-    renderer: Optional[Renderer] = None,
+    root_module: str | None = None,
+    renderer: Renderer | None = None,
     docstring_style: str = "google",
-    source_prefix: Optional[str] = None,
+    source_prefix: str | None = None,
     skip_empty: bool = True,
 ) -> bool:
     """Generate MDX documentation from module info.
@@ -119,7 +119,7 @@ def generate_mdx(
                     root_module,
                     source_prefix,
                 )
-            
+
             header = f"### `{func['name']}`"
             header_with_link = renderer.header_with_source(header, source_link)
             lines.append(header_with_link)
@@ -132,7 +132,9 @@ def generate_mdx(
             if func["docstring"]:
                 lines.append("")
                 # Format docstring with Griffe
-                formatted_docstring = format_docstring_with_griffe(func["docstring"], docstring_style)
+                formatted_docstring = format_docstring_with_griffe(
+                    func["docstring"], docstring_style
+                )
                 lines.append(renderer.escape(formatted_docstring))
                 lines.append("")
 
@@ -153,7 +155,7 @@ def generate_mdx(
                     root_module,
                     source_prefix,
                 )
-            
+
             header = f"### `{cls['name']}`"
             header_with_link = renderer.header_with_source(header, source_link)
             lines.append(header_with_link)
@@ -162,7 +164,9 @@ def generate_mdx(
             if cls["docstring"]:
                 lines.append("")
                 # Format docstring with Griffe
-                formatted_docstring = format_docstring_with_griffe(cls["docstring"], docstring_style)
+                formatted_docstring = format_docstring_with_griffe(
+                    cls["docstring"], docstring_style
+                )
                 lines.append(renderer.escape(formatted_docstring))
                 lines.append("")
 
@@ -176,7 +180,9 @@ def generate_mdx(
                     if repo_url and "line" in method:
                         # For inherited methods, use the source file from the method itself
                         # For regular methods, use the module's source file
-                        source_file = method.get("source_file", module_info.get("source_file"))
+                        source_file = method.get(
+                            "source_file", module_info.get("source_file")
+                        )
                         if source_file:
                             method_source_link = generate_source_link(
                                 repo_url,
@@ -186,12 +192,14 @@ def generate_mdx(
                                 root_module,
                                 source_prefix,
                             )
-                    
+
                     # Add inherited indicator if this is an inherited method
                     method_name = method["name"]
-                    
+
                     method_header = f"#### `{method_name}`"
-                    method_header_with_link = renderer.header_with_source(method_header, method_source_link)
+                    method_header_with_link = renderer.header_with_source(
+                        method_header, method_source_link
+                    )
                     lines.append(method_header_with_link)
                     lines.append("")
                     lines.append("```python")
@@ -208,7 +216,7 @@ def generate_mdx(
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
     new_content = "\n".join(lines)
-    
+
     # Only write if content has changed
     # This prevents triggering pre-commit hooks when regenerating identical docs
     if output_file.exists():

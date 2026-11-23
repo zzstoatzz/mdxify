@@ -3,11 +3,10 @@
 import subprocess
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
 from urllib.parse import urlparse
 
 
-def detect_github_repo_url() -> Optional[str]:
+def detect_github_repo_url() -> str | None:
     """Detect GitHub repository URL from git remote."""
     try:
         # Get the remote URL
@@ -18,29 +17,31 @@ def detect_github_repo_url() -> Optional[str]:
             check=True,
         )
         remote_url = result.stdout.strip()
-        
+
         # Convert SSH URLs to HTTPS
         if remote_url.startswith("git@github.com:"):
             # git@github.com:owner/repo.git -> https://github.com/owner/repo
             remote_url = remote_url.replace("git@github.com:", "https://github.com/")
-        
+
         # Remove .git suffix if present
-        if remote_url.endswith(".git"):
-            remote_url = remote_url[:-4]
-        
+        remote_url = remote_url.removesuffix(".git")
+
         # Validate it's a GitHub URL
         parsed = urlparse(remote_url)
-        if parsed.netloc == "github.com" and len(parsed.path.strip("/").split("/")) == 2:
+        if (
+            parsed.netloc == "github.com"
+            and len(parsed.path.strip("/").split("/")) == 2
+        ):
             return remote_url
-            
+
     except subprocess.CalledProcessError:
         pass
-    
+
     return None
 
 
 @lru_cache(maxsize=1)
-def detect_git_root() -> Optional[Path]:
+def detect_git_root() -> Path | None:
     """Detect the git repository root directory.
 
     Returns:
@@ -58,7 +59,7 @@ def detect_git_root() -> Optional[Path]:
         return None
 
 
-def _find_module_relative_path(file_path: Path, root_module: str) -> Optional[Path]:
+def _find_module_relative_path(file_path: Path, root_module: str) -> Path | None:
     """Find the relative path using pattern matching on the module name.
 
     This is the legacy approach that looks for /src/{root_module}/ or
@@ -95,8 +96,8 @@ def _find_module_relative_path(file_path: Path, root_module: str) -> Optional[Pa
 def get_relative_path(
     file_path: Path,
     root_module: str,
-    source_prefix: Optional[str] = None,
-) -> Optional[Path]:
+    source_prefix: str | None = None,
+) -> Path | None:
     """Get the relative path from the repository root to the source file.
 
     Uses a three-tier fallback strategy:
@@ -140,9 +141,9 @@ def generate_source_link(
     branch: str,
     file_path: Path,
     line_number: int,
-    root_module: Optional[str] = None,
-    source_prefix: Optional[str] = None,
-) -> Optional[str]:
+    root_module: str | None = None,
+    source_prefix: str | None = None,
+) -> str | None:
     """Generate a GitHub source code link.
 
     Args:
@@ -174,38 +175,38 @@ def generate_source_link(
             if part in ["src", "lib"]:
                 relative_path = Path(*path_parts[i:])
                 break
-    
+
     if not relative_path:
         return None
-    
+
     # Convert to forward slashes for URL
     path_str = str(relative_path).replace("\\", "/")
-    
+
     # Generate GitHub URL
     return f"{repo_url}/blob/{branch}/{path_str}#L{line_number}"
 
 
 def add_source_link_to_header(
     header: str,
-    source_link: Optional[str],
+    source_link: str | None,
     link_text: str = "[source]",
 ) -> str:
     """Add a source link to a markdown header.
-    
+
     Args:
         header: The markdown header (e.g., "### `function_name`")
         source_link: The source code URL
         link_text: Text for the link (default: "[source]")
-    
+
     Returns:
         Header with inline source link icon
     """
     if not source_link:
         return header
-    
+
     # Add GitHub icon inline with the header
     # Using Mintlify's Icon component with proper CSS units for Firefox compatibility
     github_icon = f' <sup><a href="{source_link}" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>'
-    
+
     # Return header with inline GitHub icon
     return f"{header}{github_icon}"

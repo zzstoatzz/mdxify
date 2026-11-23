@@ -60,7 +60,10 @@ def test_generate_source_link():
             42,
             "mypackage",
         )
-        assert link == "https://github.com/owner/repo/blob/main/src/mypackage/module.py#L42"
+        assert (
+            link
+            == "https://github.com/owner/repo/blob/main/src/mypackage/module.py#L42"
+        )
 
         # Test with different branch
         link = generate_source_link(
@@ -70,7 +73,10 @@ def test_generate_source_link():
             100,
             "mypackage",
         )
-        assert link == "https://github.com/owner/repo/blob/develop/mypackage/module.py#L100"
+        assert (
+            link
+            == "https://github.com/owner/repo/blob/develop/mypackage/module.py#L100"
+        )
 
         # Test with trailing slash in repo URL
         link = generate_source_link(
@@ -80,7 +86,9 @@ def test_generate_source_link():
             1,
             "mypackage",
         )
-        assert link == "https://github.com/owner/repo/blob/main/src/mypackage/module.py#L1"
+        assert (
+            link == "https://github.com/owner/repo/blob/main/src/mypackage/module.py#L1"
+        )
 
 
 def test_add_source_link_to_header():
@@ -93,10 +101,10 @@ def test_add_source_link_to_header():
     # The link should be inline with GitHub icon
     expected = '### `function_name` <sup><a href="https://github.com/owner/repo/blob/main/module.py#L42" target="_blank"><Icon icon="github" style="width: 14px; height: 14px;" /></a></sup>'
     assert result == expected
-    
+
     # Test that link is inline
     assert '<sup><a href="' in result
-    
+
     # Test with no link
     result = add_source_link_to_header("### `function_name`", None)
     assert result == "### `function_name`"
@@ -128,7 +136,9 @@ def test_detect_git_root():
 def test_get_relative_path_monorepo_with_git_root():
     """Test that git root produces correct paths for monorepo layouts."""
     git_root = Path("/home/user/monorepo")
-    file_path = Path("/home/user/monorepo/src/integrations/prefect-aws/prefect_aws/credentials.py")
+    file_path = Path(
+        "/home/user/monorepo/src/integrations/prefect-aws/prefect_aws/credentials.py"
+    )
 
     with patch("mdxify.source_links.detect_git_root", return_value=git_root):
         result = get_relative_path(file_path, "prefect_aws")
@@ -138,7 +148,9 @@ def test_get_relative_path_monorepo_with_git_root():
 
 def test_get_relative_path_with_source_prefix():
     """Test that source_prefix is prepended to module-relative path."""
-    file_path = Path("/home/user/monorepo/src/integrations/prefect-aws/prefect_aws/credentials.py")
+    file_path = Path(
+        "/home/user/monorepo/src/integrations/prefect-aws/prefect_aws/credentials.py"
+    )
 
     result = get_relative_path(
         file_path,
@@ -151,7 +163,9 @@ def test_get_relative_path_with_source_prefix():
 def test_get_relative_path_source_prefix_takes_priority():
     """Test that source_prefix overrides git root detection."""
     git_root = Path("/home/user/monorepo")
-    file_path = Path("/home/user/monorepo/src/integrations/prefect-aws/prefect_aws/credentials.py")
+    file_path = Path(
+        "/home/user/monorepo/src/integrations/prefect-aws/prefect_aws/credentials.py"
+    )
 
     with patch("mdxify.source_links.detect_git_root", return_value=git_root):
         result = get_relative_path(
@@ -180,13 +194,18 @@ def test_generate_source_link_with_source_prefix():
         link = generate_source_link(
             "https://github.com/PrefectHQ/prefect",
             "main",
-            Path("/home/user/prefect/src/integrations/prefect-aws/prefect_aws/credentials.py"),
+            Path(
+                "/home/user/prefect/src/integrations/prefect-aws/prefect_aws/credentials.py"
+            ),
             42,
             "prefect_aws",
             source_prefix="src/integrations/prefect-aws",
         )
 
-    assert link == "https://github.com/PrefectHQ/prefect/blob/main/src/integrations/prefect-aws/prefect_aws/credentials.py#L42"
+    assert (
+        link
+        == "https://github.com/PrefectHQ/prefect/blob/main/src/integrations/prefect-aws/prefect_aws/credentials.py#L42"
+    )
 
 
 def test_inherited_method_source_links():
@@ -196,18 +215,19 @@ def test_inherited_method_source_links():
 
     from mdxify.generator import generate_mdx
     from mdxify.parser import parse_modules_with_inheritance
-    
+
     # Create test files with realistic repository structure
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
-        
+
         # Create src/test/ directory structure
         src_path = tmp_path / "src" / "test"
         src_path.mkdir(parents=True, exist_ok=True)
-        
+
         # Create parent module
         parent_file = src_path / "parent_module.py"
-        parent_file.write_text(dedent('''
+        parent_file.write_text(
+            dedent('''
             """Parent module."""
             
             class BaseClass:
@@ -216,11 +236,13 @@ def test_inherited_method_source_links():
                 def base_method(self, x: int) -> int:
                     """A method from the base class."""
                     return x * 2
-        '''))
-        
+        ''')
+        )
+
         # Create child module
         child_file = src_path / "child_module.py"
-        child_file.write_text(dedent('''
+        child_file.write_text(
+            dedent('''
             """Child module."""
             
             from .parent_module import BaseClass
@@ -231,35 +253,44 @@ def test_inherited_method_source_links():
                 def child_method(self, value: str) -> str:
                     """A method specific to the child class."""
                     return f"Child: {value}"
-        '''))
-        
+        ''')
+        )
+
         # Mock module discovery
         import sys
+
         sys.path.insert(0, str(src_path))
-        
+
         try:
             from unittest.mock import patch
-            
+
             def mock_get_module_source_file(module_name):
                 if module_name == "parent_module":
                     return parent_file
                 elif module_name == "child_module":
                     return child_file
                 return None
-            
+
             def mock_find_all_modules(root_module):
                 return ["parent_module", "child_module"]
-            
-            with patch('mdxify.discovery.get_module_source_file', side_effect=mock_get_module_source_file), \
-                 patch('mdxify.discovery.find_all_modules', side_effect=mock_find_all_modules):
-                
+
+            with (
+                patch(
+                    "mdxify.discovery.get_module_source_file",
+                    side_effect=mock_get_module_source_file,
+                ),
+                patch(
+                    "mdxify.discovery.find_all_modules",
+                    side_effect=mock_find_all_modules,
+                ),
+            ):
                 # Parse with inheritance
                 results = parse_modules_with_inheritance(["child_module"])
                 child_result = results["child_module"]
-                
+
                 # Generate MDX with source links
                 output_file = tmp_path / "test.mdx"
-                
+
                 generate_mdx(
                     child_result,
                     output_file,
@@ -267,19 +298,19 @@ def test_inherited_method_source_links():
                     branch="main",
                     root_module="test",
                 )
-                
+
                 # Read the generated MDX
                 mdx_content = output_file.read_text()
-                
+
                 # Check that the inherited method has a source link
                 # The source link should point to the parent module
                 assert "base_method" in mdx_content
                 assert "parent_module.py" in mdx_content
                 assert "github.com/test/repo" in mdx_content
-                
+
                 # Check that the child method also has a source link
                 assert "child_method" in mdx_content
                 assert "child_module.py" in mdx_content
-                
+
         finally:
             sys.path.remove(str(src_path))

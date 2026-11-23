@@ -4,17 +4,16 @@ import importlib
 import importlib.util
 import pkgutil
 from pathlib import Path
-from typing import Optional
 
 
-def get_module_source_file(module_name: str) -> Optional[Path]:
+def get_module_source_file(module_name: str) -> Path | None:
     """Get the source file path for a module."""
     try:
         spec = importlib.util.find_spec(module_name)
         if spec and spec.origin:
             return Path(spec.origin)
-    except Exception:
-        pass
+    except Exception:  # noqa: BLE001 - find_spec imports parent packages, which can raise anything
+        return None
     return None
 
 

@@ -1,7 +1,5 @@
 """Tests for the generator module."""
 
-
-
 from mdxify.generator import generate_mdx, is_module_empty
 
 
@@ -17,7 +15,7 @@ title: test
 
 *This module is empty or contains only private/internal implementations.*
 """)
-    
+
     assert is_module_empty(mdx_file) is True
 
 
@@ -37,7 +35,7 @@ This module has content.
 
 ### `example`
 """)
-    
+
     assert is_module_empty(mdx_file) is False
 
 
@@ -48,7 +46,7 @@ def test_generate_mdx_empty_module_skipped_by_default(tmp_path):
         "docstring": "",
         "functions": [],
         "classes": [],
-        "source_file": "/path/to/file.py"
+        "source_file": "/path/to/file.py",
     }
 
     output_file = tmp_path / "test-empty.mdx"
@@ -65,7 +63,7 @@ def test_generate_mdx_empty_module_removes_existing_stub(tmp_path):
         "docstring": "",
         "functions": [],
         "classes": [],
-        "source_file": "/path/to/file.py"
+        "source_file": "/path/to/file.py",
     }
 
     output_file = tmp_path / "test-empty.mdx"
@@ -86,7 +84,7 @@ def test_generate_mdx_empty_module_opt_out(tmp_path):
         "docstring": "",
         "functions": [],
         "classes": [],
-        "source_file": "/path/to/file.py"
+        "source_file": "/path/to/file.py",
     }
 
     output_file = tmp_path / "test-empty.mdx"
@@ -95,7 +93,10 @@ def test_generate_mdx_empty_module_opt_out(tmp_path):
     assert wrote is True
     content = output_file.read_text()
     assert "title: empty" in content
-    assert "*This module is empty or contains only private/internal implementations.*" in content
+    assert (
+        "*This module is empty or contains only private/internal implementations.*"
+        in content
+    )
 
 
 def test_generate_mdx_with_content(tmp_path):
@@ -108,7 +109,7 @@ def test_generate_mdx_with_content(tmp_path):
                 "name": "test_function",
                 "signature": "test_function(x: int) -> str",
                 "docstring": "A test function.",
-                "line": 10
+                "line": 10,
             }
         ],
         "classes": [
@@ -120,34 +121,34 @@ def test_generate_mdx_with_content(tmp_path):
                         "name": "test_method",
                         "signature": "test_method(self)",
                         "docstring": "A test method.",
-                        "line": 20
+                        "line": 20,
                     }
                 ],
-                "line": 15
+                "line": 15,
             }
         ],
-        "source_file": "/path/to/file.py"
+        "source_file": "/path/to/file.py",
     }
-    
+
     output_file = tmp_path / "test-example.mdx"
     generate_mdx(module_info, output_file)
-    
+
     content = output_file.read_text()
-    
+
     # Check frontmatter
     assert "title: example" in content
     assert "sidebarTitle: example" in content
-    
+
     # Check module header
     assert "# `test.example`" in content
     assert "This is a test module." in content
-    
+
     # Check functions section
     assert "## Functions" in content
     assert "### `test_function`" in content
     assert "test_function(x: int) -> str" in content
     assert "A test function." in content
-    
+
     # Check classes section
     assert "## Classes" in content
     assert "### `TestClass`" in content

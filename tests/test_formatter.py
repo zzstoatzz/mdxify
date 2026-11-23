@@ -1,6 +1,5 @@
 """Tests for the formatter module."""
 
-
 from mdxify.formatter import escape_mdx_content, format_docstring_with_griffe
 
 
@@ -16,13 +15,13 @@ def test_escape_mdx_content_preserves_code_blocks():
     
     More text with list[str] type.
     """
-    
+
     result = escape_mdx_content(content)
-    
+
     # Type annotations outside code blocks should be escaped
     assert "dict\\[str, Any]" in result
     assert "list\\[str]" in result
-    
+
     # But not inside code blocks
     assert "def example(data: dict[str, Any]) -> list[int]:" in result
 
@@ -54,7 +53,7 @@ def test_format_docstring_with_griffe_simple():
     Returns:
         The sum of x and y
     """
-    
+
     # The actual formatting depends on griffe being installed
     # For now, just test that it doesn't crash
     result = format_docstring_with_griffe(docstring)
@@ -64,7 +63,7 @@ def test_format_docstring_with_griffe_simple():
 
 def test_format_docstring_escapes_colons_in_args():
     """Test that colons in parameter descriptions are escaped."""
-    docstring = '''
+    docstring = """
     OAuth client implementation.
     
     Args:
@@ -73,19 +72,25 @@ def test_format_docstring_escapes_colons_in_args():
     
     Raises:
         ValueError: If the URL is invalid: missing protocol or host
-    '''
-    
+    """
+
     result = format_docstring_with_griffe(docstring)
-    
+
     # Check that colons in descriptions are escaped
-    assert '- `mcp_url`: Full URL to the MCP endpoint (e.g., "http\\://host/mcp/sse/")' in result
-    assert "- `scopes`: OAuth scopes to request\\: Can be a space-separated string" in result
+    assert (
+        '- `mcp_url`: Full URL to the MCP endpoint (e.g., "http\\://host/mcp/sse/")'
+        in result
+    )
+    assert (
+        "- `scopes`: OAuth scopes to request\\: Can be a space-separated string"
+        in result
+    )
     assert "- `ValueError`: If the URL is invalid\\: missing protocol or host" in result
 
 
 def test_format_docstring_with_examples_section():
     """Test that Examples section is rendered as a bold header like Args/Returns."""
-    docstring = '''
+    docstring = """
     Creates a deployment for this flow and starts a runner to monitor for scheduled work.
 
     Args:
@@ -147,10 +152,10 @@ def test_format_docstring_with_examples_section():
         if __name__ == "__main__":
             my_flow.serve("example-deployment", interval=3600)
         ```
-    '''
-    
+    """
+
     result = format_docstring_with_griffe(docstring)
-    
+
     # Check that Examples is rendered as a bold header
     assert "**Examples:**" in result
     # Check that other sections are also bold
@@ -162,12 +167,12 @@ def test_format_docstring_with_attributes_section():
 
     Regression test for issue #32.
     """
-    docstring = '''Schema for a column in a table.
+    docstring = """Schema for a column in a table.
 
     Attributes:
         name (str): The name of the column.
         type (str): The data type of the column, represented as a string.
-    '''
+    """
 
     result = format_docstring_with_griffe(docstring)
 
@@ -183,7 +188,7 @@ def test_format_docstring_with_attributes_section():
 
 def test_format_docstring_with_attributes_and_methods():
     """Test class docstring with both Attributes and other sections."""
-    docstring = '''Configuration for database connections.
+    docstring = """Configuration for database connections.
 
     Attributes:
         host (str): The database host address.
@@ -193,7 +198,7 @@ def test_format_docstring_with_attributes_and_methods():
         >>> config = DatabaseConfig("localhost", 5432)
         >>> print(config.host)
         localhost
-    '''
+    """
 
     result = format_docstring_with_griffe(docstring)
 
@@ -209,7 +214,7 @@ def test_format_docstring_with_numpy_style():
 
     Addresses issue #31 - docstring style should be configurable.
     """
-    docstring = '''Calculate the mean of values.
+    docstring = """Calculate the mean of values.
 
     Parameters
     ----------
@@ -225,7 +230,7 @@ def test_format_docstring_with_numpy_style():
     ----------
     result : float
         The computed result.
-    '''
+    """
 
     result = format_docstring_with_griffe(docstring, style="numpy")
 
@@ -241,13 +246,13 @@ def test_format_docstring_with_numpy_style():
 
 def test_format_docstring_with_sphinx_style():
     """Test formatting Sphinx-style docstrings."""
-    docstring = '''Process the given data.
+    docstring = """Process the given data.
 
     :param data: The input data.
     :type data: list
     :returns: Processed data.
     :rtype: dict
-    '''
+    """
 
     result = format_docstring_with_griffe(docstring, style="sphinx")
 
@@ -260,11 +265,11 @@ def test_format_docstring_with_sphinx_style():
 
 def test_format_docstring_style_default_is_google():
     """Test that Google style is the default."""
-    docstring = '''A simple function.
+    docstring = """A simple function.
 
     Args:
         x: First parameter.
-    '''
+    """
 
     # Call without style parameter - should use google
     result = format_docstring_with_griffe(docstring)

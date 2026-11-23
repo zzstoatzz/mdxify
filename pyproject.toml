@@ -77,10 +77,10 @@ python-version = "3.10"
 root = ["src"]
 
 [tool.ty.rules]
-unresolved-import = "warn"
+import-not-found = "warn"
 missing-argument = "error"
-invalid-return-type = "error"
-unresolved-attribute = "error"
+invalid-explicit-return = "error"
+missing-attribute = "error"
 
 [tool.hatch.version]
 source = "vcs"

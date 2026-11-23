@@ -3,7 +3,7 @@
 import re
 import textwrap
 
-from griffe import Docstring
+from griffe import Docstring, Parser
 
 # Pre-compile regex patterns for better performance
 _CODE_BLOCK_PATTERN = re.compile(r"(```[\s\S]*?```|`[^`]+`)")
@@ -26,7 +26,7 @@ def format_docstring_with_griffe(docstring: str, style: str = "google") -> str:
     try:
         dedented_docstring = textwrap.dedent(docstring).strip()
         doc = Docstring(dedented_docstring, lineno=1)
-        sections = doc.parse(style)  # type: ignore[arg-type]
+        sections = doc.parse(Parser(style))
 
         lines = []
 
@@ -107,7 +107,7 @@ def format_docstring_with_griffe(docstring: str, style: str = "google") -> str:
     except ImportError:
         # Fall back to raw docstring if Griffe not available
         return docstring
-    except Exception:
+    except Exception:  # noqa: BLE001 - griffe raises arbitrary errors on malformed docstrings
         # If parsing fails, return raw docstring
         return docstring
 

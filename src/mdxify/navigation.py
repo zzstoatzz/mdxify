@@ -27,19 +27,19 @@ def get_all_documented_modules(output_dir: Path) -> list[str]:
 
 
 def build_hierarchical_navigation(
-    generated_modules: list[str], 
+    generated_modules: list[str],
     output_dir: Path,
     docs_root: Path | None = None,
-    skip_empty_parents: bool = False
+    skip_empty_parents: bool = False,
 ) -> list[dict[str, Any]]:
     """Build a hierarchical navigation structure from flat module names.
-    
+
     Args:
         generated_modules: List of module names
         output_dir: Directory where MDX files are written
         docs_root: Root directory for docs (to calculate relative paths). If None, paths are relative to output_dir
         skip_empty_parents: Whether to skip empty parent modules
-    
+
     Returns a list of navigation entries where each entry is either:
     - A string (the path to the MDX file without extension)
     - A dict with "group" and "pages" keys for modules with submodules
@@ -54,10 +54,10 @@ def build_hierarchical_navigation(
             nav_prefix = Path()
     else:
         nav_prefix = Path()
-    
+
     # Group modules by their hierarchy
     module_tree = {}
-    
+
     # Find the common root package if all modules share one
     root_package = None
     if generated_modules:
@@ -65,20 +65,23 @@ def build_hierarchical_navigation(
         if len(first_parts) >= 1:
             potential_root = first_parts[0]
             # Check if all modules start with this root
-            if all(m.startswith(potential_root + ".") or m == potential_root for m in generated_modules):
+            if all(
+                m.startswith(potential_root + ".") or m == potential_root
+                for m in generated_modules
+            ):
                 root_package = potential_root
-    
+
     for module_name in sorted(generated_modules):
         parts = module_name.split(".")
-        
+
         # Skip just the root package itself if present
         if root_package and module_name == root_package:
             continue
-            
+
         # Skip the root package prefix for tree building
         if root_package and parts[0] == root_package:
             parts = parts[1:]
-        
+
         # Build the tree with path info for ALL modules
         current = module_tree
         for i, part in enumerate(parts[:-1]):
@@ -87,29 +90,31 @@ def build_hierarchical_navigation(
             elif "_submodules" not in current[part]:
                 current[part]["_submodules"] = {}
             current = current[part]["_submodules"]
-        
+
         # Add the leaf module
         if parts:
             leaf = parts[-1]
             if leaf not in current:
                 current[leaf] = {}
             current[leaf]["_path"] = module_name
-    
-    def tree_to_nav(tree: dict, parent_parts: list[str] | None = None, is_top_level: bool = True) -> list[Any]:
+
+    def tree_to_nav(
+        tree: dict, parent_parts: list[str] | None = None, is_top_level: bool = True
+    ) -> list[Any]:
         """Convert the tree structure to navigation format."""
         if parent_parts is None:
             parent_parts = []
             # If we have a root package, start with it
             if root_package:
                 parent_parts = [root_package]
-            
+
         result = []
-        
+
         for name, info in sorted(tree.items()):
             current_parts = parent_parts + [name]
             submodules = info.get("_submodules", {})
             has_path = "_path" in info
-            
+
             if submodules:
                 # This has submodules - create a group
                 # For top-level groups, use fully qualified name
@@ -119,26 +124,27 @@ def build_hierarchical_navigation(
                 else:
                     group_name = name
                 group_entry = {"group": group_name, "pages": []}
-                
+
                 # If this module itself exists (has a path), add it as __init__
                 if has_path:
                     module_name = info["_path"]
                     filename = module_name.replace(".", "-") + "-__init__"
-                    
+
                     if nav_prefix:
                         nav_path = str(nav_prefix / filename).replace("\\", "/")
                     else:
                         nav_path = filename
-                        
+
                     module_file = output_dir / f"{filename}.mdx"
-                    if module_file.exists():
-                        if not skip_empty_parents or not is_module_empty(module_file):
-                            group_entry["pages"].append(nav_path)
-                
+                    if module_file.exists() and (
+                        not skip_empty_parents or not is_module_empty(module_file)
+                    ):
+                        group_entry["pages"].append(nav_path)
+
                 # Add all submodules recursively (nested groups don't use full names)
                 sub_pages = tree_to_nav(submodules, current_parts, is_top_level=False)
                 group_entry["pages"].extend(sub_pages)
-                
+
                 # Only add the group if it has content
                 if group_entry["pages"]:
                     result.append(group_entry)
@@ -163,12 +169,12 @@ def build_hierarchical_navigation(
                 else:
                     nav_path = filename
                 result.append(nav_path)
-        
+
         return result
-    
+
     # Build the final navigation from the tree
     navigation = tree_to_nav(module_tree)
-    
+
     # Sort the top-level entries for consistent output
     # Sort groups by name, and put non-groups (plain pages) first
     def sort_key(item):
@@ -176,31 +182,33 @@ def build_hierarchical_navigation(
             return (1, item["group"])  # Groups second, sorted by name
         else:
             return (0, str(item))  # Plain pages first, sorted by string value
-    
+
     navigation.sort(key=sort_key)
-    
+
     return navigation
 
 
-def find_mdxify_placeholder(obj: Any, path: list[str] | None = None) -> tuple[Any, list[str]] | None:
+def find_mdxify_placeholder(
+    obj: Any, path: list[str] | None = None
+) -> tuple[Any, list[str]] | None:
     """Recursively find the $mdxify placeholder in a nested structure.
-    
+
     Returns the parent container and path to the placeholder, or None if not found.
     """
     if path is None:
         path = []
-        
+
     if isinstance(obj, dict):
         # Check if this dict is the placeholder
         if obj.get("$mdxify") == "generated":
             return obj, path
-            
+
         # Recursively search all values
         for key, value in obj.items():
             result = find_mdxify_placeholder(value, path + [key])
             if result:
                 return result
-                
+
     elif isinstance(obj, list):
         # Search through list items
         for i, item in enumerate(obj):
@@ -210,11 +218,13 @@ def find_mdxify_placeholder(obj: Any, path: list[str] | None = None) -> tuple[An
             result = find_mdxify_placeholder(item, path + [str(i)])
             if result:
                 return result
-                
+
     return None
 
 
-def _find_version_entry(navigation: dict[str, Any] | list[Any], version: str) -> dict[str, Any] | None:
+def _find_version_entry(
+    navigation: dict[str, Any] | list[Any], version: str
+) -> dict[str, Any] | None:
     """Find a specific version entry within Mintlify's versioned navigation.
 
     Mintlify's versioned navigation uses a ``versions`` array where each entry
@@ -256,7 +266,9 @@ def find_mdxify_anchor_or_group(
     Returns the pages list and path to it, or None if not found.
     """
 
-    def search_in_structure(obj: Any, current_path: list[str], target: str) -> tuple[Any, list[str]] | None:
+    def search_in_structure(
+        obj: Any, current_path: list[str], target: str
+    ) -> tuple[Any, list[str]] | None:
         """Recursively search for an anchor or group with the given name."""
         if isinstance(obj, dict):
             # Check if this is an anchor with the target name
@@ -322,11 +334,13 @@ def find_mdxify_anchor_or_group(
 
 
 # Keep the old function for backwards compatibility, but have it use the new one
-def find_mdxify_anchor(docs_config: dict[str, Any], anchor_name: str) -> tuple[Any, list[str]] | None:
+def find_mdxify_anchor(
+    docs_config: dict[str, Any], anchor_name: str
+) -> tuple[Any, list[str]] | None:
     """Find an existing mdxify-managed anchor in the navigation.
-    
+
     This function is kept for backwards compatibility but now searches for both anchors and groups.
-    
+
     Returns the pages list and path to it, or None if not found.
     """
     return find_mdxify_anchor_or_group(docs_config, anchor_name)
@@ -367,7 +381,9 @@ def update_docs_json(
     navigation_key = anchor_name
 
     # First, try to find an existing anchor or group
-    result = find_mdxify_anchor_or_group(docs_config, navigation_key, mintlify_version=mintlify_version)
+    result = find_mdxify_anchor_or_group(
+        docs_config, navigation_key, mintlify_version=mintlify_version
+    )
 
     if not result:
         # No existing anchor/group, look for placeholder
@@ -384,7 +400,8 @@ def update_docs_json(
                     versions = navigation.get("versions", [])
                     if isinstance(versions, list):
                         available = [
-                            v.get("version", "?") for v in versions
+                            v.get("version", "?")
+                            for v in versions
                             if isinstance(v, dict)
                         ]
                     if available:
@@ -426,16 +443,19 @@ To use automatic navigation updates, either:
 """)
             return False
 
-    container_info, path = result
-    
+    container_info, _path = result
+
     # Try to determine docs root from docs.json location
     docs_root = docs_json_path.parent
-    
+
     # Build navigation
     if regenerate_all:
         # Complete regeneration - use only the generated modules
         navigation_pages = build_hierarchical_navigation(
-            generated_modules, output_dir, docs_root, skip_empty_parents=skip_empty_parents
+            generated_modules,
+            output_dir,
+            docs_root,
+            skip_empty_parents=skip_empty_parents,
         )
     else:
         # Merge mode - get all documented modules and build complete navigation
@@ -451,7 +471,7 @@ To use automatic navigation updates, either:
         container, index = container_info
         if index is not None:
             # Replace the placeholder with the generated pages
-            container[index:index+1] = navigation_pages
+            container[index : index + 1] = navigation_pages
         else:
             # Update existing pages list (clear and replace)
             container.clear()
@@ -493,7 +513,9 @@ To use automatic navigation updates, either:
         f.write(new_content)
 
     if isinstance(container_info, tuple) and container_info[1] is not None:
-        print(f"Updated {docs_json_path} - replaced placeholder with {len(navigation_pages)} entries")
+        print(
+            f"Updated {docs_json_path} - replaced placeholder with {len(navigation_pages)} entries"
+        )
     else:
         print(f"Updated {docs_json_path} - {len(navigation_pages)} entries")
 

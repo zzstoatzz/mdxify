@@ -9,23 +9,29 @@ from .navigation import (
     get_all_documented_modules,
     update_docs_json,
 )
-from .parser import extract_docstring, extract_function_signature, parse_module_fast, parse_modules_with_inheritance, ClassRegistry
+from .parser import (
+    extract_docstring,
+    extract_function_signature,
+    parse_module_fast,
+    parse_modules_with_inheritance,
+    ClassRegistry,
+)
 
 __all__ = [
-    "main",
-    "find_all_modules",
-    "get_module_source_file",
-    "should_include_module",
-    "escape_mdx_content",
-    "format_docstring_with_griffe",
-    "generate_mdx",
-    "is_module_empty",
+    "ClassRegistry",
     "build_hierarchical_navigation",
-    "get_all_documented_modules",
-    "update_docs_json",
+    "escape_mdx_content",
     "extract_docstring",
     "extract_function_signature",
+    "find_all_modules",
+    "format_docstring_with_griffe",
+    "generate_mdx",
+    "get_all_documented_modules",
+    "get_module_source_file",
+    "is_module_empty",
+    "main",
     "parse_module_fast",
     "parse_modules_with_inheritance",
-    "ClassRegistry",
+    "should_include_module",
+    "update_docs_json",
 ]

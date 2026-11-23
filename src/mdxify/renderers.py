@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from .formatter import escape_mdx_content
 from .source_links import add_source_link_to_header
@@ -17,10 +16,10 @@ class Renderer:
     def escape(self, content: str) -> str:  # pragma: no cover - simple passthroughs
         return content
 
-    def header_with_source(self, header: str, source_link: Optional[str]) -> str:
+    def header_with_source(self, header: str, source_link: str | None) -> str:
         return header
 
-    def frontmatter(self, title: str, sidebar_title: Optional[str] = None) -> list[str]:
+    def frontmatter(self, title: str, sidebar_title: str | None = None) -> list[str]:
         lines = ["---", f"title: {title}"]
         if sidebar_title:
             lines.append(f"sidebarTitle: {sidebar_title}")
@@ -36,7 +35,7 @@ class MDXRenderer(Renderer):
     def escape(self, content: str) -> str:
         return escape_mdx_content(content)
 
-    def header_with_source(self, header: str, source_link: Optional[str]) -> str:
+    def header_with_source(self, header: str, source_link: str | None) -> str:
         return add_source_link_to_header(header, source_link)
 
 
@@ -48,7 +47,7 @@ class MarkdownRenderer(Renderer):
         # Markdown needs minimal escaping; pass through content as-is.
         return content
 
-    def header_with_source(self, header: str, source_link: Optional[str]) -> str:
+    def header_with_source(self, header: str, source_link: str | None) -> str:
         if not source_link:
             return header
         # Append a plain markdown link after the header
@@ -60,4 +59,3 @@ def get_renderer(name: str) -> Renderer:
     if name == "md":
         return MarkdownRenderer()
     return MDXRenderer()
-
