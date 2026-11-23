@@ -198,20 +198,18 @@ def test_benchmark_performance(test_package, tmp_path):
     mdx_files = list(output_dir.rglob("*.mdx"))
     print(f"  Files generated: {len(mdx_files)}")
 
-    # Set a baseline - should process ~15 modules in under 0.5 seconds
-    assert results["average"] < 0.5, (
-        f"Performance regression: {results['average']:.3f}s average"
-    )
+    # ~15 modules in under 0.5 seconds beyond interpreter startup, which a
+    # one-module package measures
+    baseline_dir = _simple_package(tmp_path / "baseline", "onepkg", 1)
+    baseline = run_mdxify_benchmark(baseline_dir, tmp_path / "out-baseline")
+    marginal = results["min"] - baseline["min"]
+    assert marginal < 0.5, f"Performance regression: {marginal:.3f}s beyond startup"
 
 
-@pytest.mark.parametrize("module_count", [50, 100])
-def test_benchmark_scale(tmp_path, module_count):
-    """Test performance at different scales."""
-    package_dir = tmp_path / "largepkg"
-    package_dir.mkdir()
+def _simple_package(root: Path, name: str, module_count: int) -> Path:
+    package_dir = root / name
+    package_dir.mkdir(parents=True)
     (package_dir / "__init__.py").write_text('"""Large package."""')
-
-    # Create many simple modules
     for i in range(module_count):
         (package_dir / f"module{i}.py").write_text(f'''"""Module {i}."""
 
@@ -219,12 +217,23 @@ def function{i}():
     """Simple function."""
     pass
 ''')
+    return package_dir
 
-    output_dir = tmp_path / "output"
-    results = run_mdxify_benchmark(package_dir, output_dir, iterations=1)
+
+@pytest.mark.parametrize("module_count", [50, 100])
+def test_benchmark_scale(tmp_path, module_count):
+    """Test performance at different scales."""
+    # each run is a fresh interpreter, so time a one-module package too and
+    # judge only the per-module cost: startup alone can take half a second
+    baseline_dir = _simple_package(tmp_path / "baseline", "onepkg", 1)
+    package_dir = _simple_package(tmp_path / "scale", "largepkg", module_count)
+
+    baseline = run_mdxify_benchmark(baseline_dir, tmp_path / "out-baseline")
+    results = run_mdxify_benchmark(package_dir, tmp_path / "out-scale")
+    marginal = results["min"] - baseline["min"]
 
     print(f"\nScale test ({module_count} modules): {results['average']:.3f}s")
-    print(f"  Per module: {results['average'] / module_count * 1000:.1f}ms")
+    print(f"  Per module: {marginal / module_count * 1000:.1f}ms beyond startup")
 
-    # Should process at least 100 modules per second
-    assert results["average"] < module_count / 100
+    # Should process at least 100 modules per second beyond startup
+    assert marginal < module_count / 100
